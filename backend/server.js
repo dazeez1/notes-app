@@ -1,59 +1,83 @@
-require('dotenv').config();
+require("dotenv").config();
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const compression = require("compression");
+const rateLimit = require("express-rate-limit");
 
 // Import custom modules
-const databaseConnection = require('./config/database');
-const authRoutes = require('./routes/authRoutes');
+const databaseConnection = require("./config/database");
+const authRoutes = require("./routes/authRoutes");
+const noteRoutes = require("./routes/noteRoutes");
 
 // Initialize Express app
 const app = express();
 
 // Get port from environment or use default
 const PORT = process.env.PORT || 3000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
+const NODE_ENV = process.env.NODE_ENV || "development";
 
 /**
  * Security Middleware Configuration
  */
 
 // Helmet for security headers
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false
-}));
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS 
-      ? process.env.ALLOWED_ORIGINS.split(',')
-      : ['http://localhost:3000', 'http://localhost:3001'];
-    
+    const allowedOrigins = process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(",")
+      : [
+          "http://localhost:3000",
+          "http://localhost:3001",
+          "http://localhost:8080",
+          "http://127.0.0.1:3000",
+          "http://127.0.0.1:5500",
+          "http://127.0.0.1:8080",
+          "http://localhost:5500",
+        ];
+
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
+
+    // Allow same-origin requests (when frontend and backend are on same port)
+    if (
+      origin === `http://localhost:${PORT}` ||
+      origin === `http://127.0.0.1:${PORT}` ||
+      origin === `http://localhost:5500` ||
+      origin === `http://127.0.0.1:5500` ||
+      origin === `http://localhost:8080` ||
+      origin === `http://127.0.0.1:8080`
+    ) {
+      return callback(null, true);
+    }
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.log(`CORS blocked origin: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
 app.use(cors(corsOptions));
@@ -64,8 +88,8 @@ const limiter = rateLimit({
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
   message: {
     success: false,
-    message: 'Too many requests from this IP, please try again later.',
-    error: 'RATE_LIMIT_EXCEEDED'
+    message: "Too many requests from this IP, please try again later.",
+    error: "RATE_LIMIT_EXCEEDED",
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -76,11 +100,11 @@ app.use(limiter);
 // Stricter rate limiting for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs for auth routes
+  max: 50, // limit each IP to 50 requests per windowMs for auth routes (increased for development)
   message: {
     success: false,
-    message: 'Too many authentication attempts, please try again later.',
-    error: 'AUTH_RATE_LIMIT_EXCEEDED'
+    message: "Too many authentication attempts, please try again later.",
+    error: "AUTH_RATE_LIMIT_EXCEEDED",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -94,38 +118,41 @@ const authLimiter = rateLimit({
 app.use(compression());
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Serve static files from public directory
+app.use(express.static("../public"));
 
 // Logging middleware
-if (NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+if (NODE_ENV === "development") {
+  app.use(morgan("dev"));
 } else {
-  app.use(morgan('combined'));
+  app.use(morgan("combined"));
 }
 
 // Request ID middleware for tracking
 app.use((req, res, next) => {
   req.requestId = Math.random().toString(36).substr(2, 9);
-  res.setHeader('X-Request-ID', req.requestId);
+  res.setHeader("X-Request-ID", req.requestId);
   next();
 });
 
 /**
  * Health Check Route
  */
-app.get('/health', (req, res) => {
+app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Notes App API is running',
+    message: "Notes App API is running",
     data: {
-      service: 'notes-app-api',
-      status: 'healthy',
+      service: "notes-app-api",
+      status: "healthy",
       timestamp: new Date().toISOString(),
       environment: NODE_ENV,
-      version: '1.0.0',
-      requestId: req.requestId
-    }
+      version: "1.0.0",
+      requestId: req.requestId,
+    },
   });
 });
 
@@ -134,27 +161,62 @@ app.get('/health', (req, res) => {
  */
 
 // Apply auth rate limiting to authentication routes
-app.use('/api/auth', authLimiter, authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
+
+// Apply general rate limiting to notes routes
+app.use("/api/notes", limiter, noteRoutes);
 
 // Root route
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'Welcome to Notes App API',
+    message: "Welcome to Notes App API",
     data: {
-      service: 'notes-app-api',
-      version: '1.0.0',
-      documentation: '/api/docs',
-      health: '/health',
+      service: "notes-app-api",
+      version: "1.0.0",
+      documentation: "/api/docs",
+      health: "/health",
       auth: {
-        signup: 'POST /api/auth/signup',
-        login: 'POST /api/auth/login',
-        verifyOtp: 'POST /api/auth/verify-otp',
-        resendOtp: 'POST /api/auth/resend-otp',
-        profile: 'GET /api/auth/me',
-        protected: 'GET /api/auth/protected'
-      }
-    }
+        signup: "POST /api/auth/signup",
+        login: "POST /api/auth/login",
+        verifyOtp: "POST /api/auth/verify-otp",
+        resendOtp: "POST /api/auth/resend-otp",
+        profile: "GET /api/auth/me",
+        protected: "GET /api/auth/protected",
+      },
+      notes: {
+        create: "POST /api/notes",
+        getAll: "GET /api/notes",
+        getById: "GET /api/notes/:id",
+        update: "PUT /api/notes/:id",
+        delete: "DELETE /api/notes/:id",
+        search: "GET /api/notes/search",
+        stats: "GET /api/notes/stats",
+        pin: "PATCH /api/notes/:id/pin",
+        archive: "PATCH /api/notes/:id/archive",
+      },
+    },
+  });
+});
+
+// Email test route (for debugging)
+app.get("/test-email", (req, res) => {
+  const emailService = require("./utils/emailService");
+  const emailConfig = {
+    hasUser: !!process.env.EMAIL_USER,
+    hasPass: !!process.env.EMAIL_PASS,
+    service: process.env.EMAIL_SERVICE || "gmail",
+    from: process.env.EMAIL_FROM || "Notes App <noreply@notesapp.com>",
+    isConfigured: emailService.isConfigured,
+  };
+
+  res.status(200).json({
+    success: true,
+    message: "Email configuration status",
+    data: {
+      emailConfig,
+      environment: NODE_ENV,
+    },
   });
 });
 
@@ -163,41 +225,41 @@ app.get('/', (req, res) => {
  */
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use("*", (req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found',
-    error: 'ROUTE_NOT_FOUND',
+    message: "Route not found",
+    error: "ROUTE_NOT_FOUND",
     data: {
       requestedUrl: req.originalUrl,
       method: req.method,
       timestamp: new Date().toISOString(),
-      requestId: req.requestId
-    }
+      requestId: req.requestId,
+    },
   });
 });
 
 // Global error handler
 app.use((error, req, res, next) => {
-  console.error('Global error handler:', error);
+  console.error("Global error handler:", error);
 
   // CORS error
-  if (error.message === 'Not allowed by CORS') {
+  if (error.message === "Not allowed by CORS") {
     return res.status(403).json({
       success: false,
-      message: 'CORS policy violation',
-      error: 'CORS_ERROR',
-      requestId: req.requestId
+      message: "CORS policy violation",
+      error: "CORS_ERROR",
+      requestId: req.requestId,
     });
   }
 
   // Default error response
   res.status(error.status || 500).json({
     success: false,
-    message: error.message || 'Internal server error',
-    error: 'INTERNAL_SERVER_ERROR',
-    ...(NODE_ENV === 'development' && { stack: error.stack }),
-    requestId: req.requestId
+    message: error.message || "Internal server error",
+    error: "INTERNAL_SERVER_ERROR",
+    ...(NODE_ENV === "development" && { stack: error.stack }),
+    requestId: req.requestId,
   });
 });
 
@@ -208,7 +270,7 @@ async function startServer() {
   try {
     // Connect to database
     await databaseConnection.connect();
-    
+
     // Start server
     const server = app.listen(PORT, () => {
       console.log(`
@@ -229,6 +291,13 @@ async function startServer() {
    • Resend OTP: POST /api/auth/resend-otp
    • User Profile: GET /api/auth/me
    • Protected Route: GET /api/auth/protected
+   • Create Note: POST /api/notes
+   • Get Notes: GET /api/notes
+   • Get Note: GET /api/notes/:id
+   • Update Note: PUT /api/notes/:id
+   • Delete Note: DELETE /api/notes/:id
+   • Search Notes: GET /api/notes/search
+   • Note Stats: GET /api/notes/stats
 
 🛡️ Security Features:
    • Rate Limiting: Enabled
@@ -241,24 +310,23 @@ async function startServer() {
     });
 
     // Graceful shutdown handling
-    process.on('SIGTERM', () => {
-      console.log('SIGTERM received. Shutting down gracefully...');
+    process.on("SIGTERM", () => {
+      console.log("SIGTERM received. Shutting down gracefully...");
       server.close(() => {
-        console.log('Process terminated');
+        console.log("Process terminated");
         databaseConnection.disconnect();
       });
     });
 
-    process.on('SIGINT', () => {
-      console.log('SIGINT received. Shutting down gracefully...');
+    process.on("SIGINT", () => {
+      console.log("SIGINT received. Shutting down gracefully...");
       server.close(() => {
-        console.log('Process terminated');
+        console.log("Process terminated");
         databaseConnection.disconnect();
       });
     });
-
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error("❌ Failed to start server:", error);
     process.exit(1);
   }
 }

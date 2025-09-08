@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
 
 /**
  * Email service for sending OTP and other notifications
@@ -18,40 +18,72 @@ class EmailService {
     try {
       // Check if email configuration is available
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.warn('⚠️  Email configuration not found. Email service will be disabled.');
+        console.warn(
+          "⚠️  Email configuration not found. Using test configuration for development."
+        );
+        this.setupTestConfiguration();
         return;
       }
 
+      console.log("📧 Initializing email service with provided credentials...");
+      console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
+      console.log(`📧 Email Service: ${process.env.EMAIL_SERVICE || "gmail"}`);
+
       // Create transporter based on service type
-      const serviceType = process.env.EMAIL_SERVICE || 'gmail';
-      
-      if (serviceType === 'gmail') {
-        this.transporter = nodemailer.createTransporter({
-          service: 'gmail',
+      const serviceType = process.env.EMAIL_SERVICE || "gmail";
+
+      if (serviceType === "gmail") {
+        this.transporter = nodemailer.createTransport({
+          service: "gmail",
           auth: {
             user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-          }
+            pass: process.env.EMAIL_PASS,
+          },
         });
       } else {
         // For other email services, use SMTP configuration
-        this.transporter = nodemailer.createTransporter({
-          host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        this.transporter = nodemailer.createTransport({
+          host: process.env.EMAIL_HOST || "smtp.gmail.com",
           port: process.env.EMAIL_PORT || 587,
           secure: false, // true for 465, false for other ports
           auth: {
             user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-          }
+            pass: process.env.EMAIL_PASS,
+          },
         });
       }
 
       this.isConfigured = true;
-      console.log('✅ Email service configured successfully');
+      console.log("✅ Email service configured successfully");
+
+      // Test the configuration
+      this.verifyConfiguration().then((isValid) => {
+        if (isValid) {
+          console.log("✅ Email service verification successful");
+        } else {
+          console.log(
+            "⚠️  Email service verification failed - emails may not be sent"
+          );
+        }
+      });
     } catch (error) {
-      console.error('❌ Email service configuration failed:', error.message);
+      console.error("❌ Email service configuration failed:", error.message);
+      console.error("❌ Full error:", error);
       this.isConfigured = false;
     }
+  }
+
+  /**
+   * Setup test configuration for development
+   */
+  setupTestConfiguration() {
+    // For development, we'll use console logging instead of real email
+    this.transporter = null;
+    this.isConfigured = true;
+    console.log("✅ Development email service configured (Console Mode)");
+    console.log(
+      "📧 OTP codes will be displayed in the server console for testing"
+    );
   }
 
   /**
@@ -67,7 +99,7 @@ class EmailService {
       await this.transporter.verify();
       return true;
     } catch (error) {
-      console.error('❌ Email transporter verification failed:', error.message);
+      console.error("❌ Email transporter verification failed:", error.message);
       return false;
     }
   }
@@ -81,26 +113,41 @@ class EmailService {
    */
   async sendOtpEmail(emailAddress, fullName, otpCode) {
     if (!this.isConfigured) {
-      console.warn('⚠️  Email service not configured. OTP email not sent.');
+      console.warn("⚠️  Email service not configured. OTP email not sent.");
       return false;
+    }
+
+    // Development mode - display OTP in console
+    if (!this.transporter) {
+      console.log("\n" + "=".repeat(60));
+      console.log("📧 EMAIL VERIFICATION - DEVELOPMENT MODE");
+      console.log("=".repeat(60));
+      console.log(`👤 User: ${fullName}`);
+      console.log(`📧 Email: ${emailAddress}`);
+      console.log(`🔐 OTP Code: ${otpCode}`);
+      console.log("⏰ Expires in: 10 minutes");
+      console.log("=".repeat(60));
+      console.log("💡 Use this OTP code in the frontend to verify the email");
+      console.log("=".repeat(60) + "\n");
+      return true;
     }
 
     try {
       const emailContent = this.generateOtpEmailContent(fullName, otpCode);
-      
+
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'Notes App <noreply@notesapp.com>',
+        from: process.env.EMAIL_FROM || "Notes App <noreply@notesapp.com>",
         to: emailAddress,
-        subject: 'Verify Your Email Address - Notes App',
+        subject: "Verify Your Email Address - Notes App",
         html: emailContent.html,
-        text: emailContent.text
+        text: emailContent.text,
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      console.log('✅ OTP email sent successfully to:', emailAddress);
+      console.log("✅ OTP email sent successfully to:", emailAddress);
       return true;
     } catch (error) {
-      console.error('❌ Failed to send OTP email:', error.message);
+      console.error("❌ Failed to send OTP email:", error.message);
       return false;
     }
   }
@@ -113,26 +160,26 @@ class EmailService {
    */
   async sendWelcomeEmail(emailAddress, fullName) {
     if (!this.isConfigured) {
-      console.warn('⚠️  Email service not configured. Welcome email not sent.');
+      console.warn("⚠️  Email service not configured. Welcome email not sent.");
       return false;
     }
 
     try {
       const emailContent = this.generateWelcomeEmailContent(fullName);
-      
+
       const mailOptions = {
-        from: process.env.EMAIL_FROM || 'Notes App <noreply@notesapp.com>',
+        from: process.env.EMAIL_FROM || "Notes App <noreply@notesapp.com>",
         to: emailAddress,
-        subject: 'Welcome to Notes App!',
+        subject: "Welcome to Notes App!",
         html: emailContent.html,
-        text: emailContent.text
+        text: emailContent.text,
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Welcome email sent successfully to:', emailAddress);
+      console.log("✅ Welcome email sent successfully to:", emailAddress);
       return true;
     } catch (error) {
-      console.error('❌ Failed to send welcome email:', error.message);
+      console.error("❌ Failed to send welcome email:", error.message);
       return false;
     }
   }

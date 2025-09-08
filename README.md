@@ -13,6 +13,17 @@ A robust and secure REST API for a notes application with comprehensive user aut
 - **Protected Routes** with authentication middleware
 - **Rate Limiting** for security and abuse prevention
 
+### 📝 Notes Management
+
+- **Full CRUD Operations** for notes (Create, Read, Update, Delete)
+- **Tag System** for organizing and categorizing notes
+- **Tag Filtering** with single and multiple tag support
+- **Search Functionality** across note titles and content
+- **Note Pinning** for important notes
+- **Note Archiving** for better organization
+- **Owner Validation** - users can only access their own notes
+- **Timestamps** with automatic created/updated tracking
+
 ### 🔒 Security Features
 
 - **Helmet.js** for security headers
@@ -267,6 +278,147 @@ Content-Type: application/json
 GET /health
 ```
 
+### Notes Endpoints
+
+#### 1. Create Note
+
+```http
+POST /api/notes
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "noteTitle": "My Important Note",
+  "noteContent": "This is the content of my note...",
+  "noteTags": ["work", "urgent", "meeting"]
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Note created successfully",
+  "data": {
+    "note": {
+      "_id": "note_id",
+      "noteTitle": "My Important Note",
+      "noteContent": "This is the content of my note...",
+      "noteTags": ["work", "urgent", "meeting"],
+      "noteOwner": "user_id",
+      "isNotePinned": false,
+      "isNoteArchived": false,
+      "noteCreatedAt": "2024-01-01T00:00:00.000Z",
+      "noteUpdatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  }
+}
+```
+
+#### 2. Get All Notes
+
+```http
+GET /api/notes
+Authorization: Bearer <jwt_token>
+```
+
+**Query Parameters:**
+
+- `tag` - Filter by single tag
+- `tags` - Filter by multiple tags (comma-separated)
+- `limit` - Number of notes to return (default: 50)
+- `skip` - Number of notes to skip (default: 0)
+- `includeArchived` - Include archived notes (default: false)
+
+**Examples:**
+
+```http
+GET /api/notes?tag=work
+GET /api/notes?tags=work,urgent
+GET /api/notes?limit=10&skip=0
+```
+
+#### 3. Get Note by ID
+
+```http
+GET /api/notes/:noteId
+Authorization: Bearer <jwt_token>
+```
+
+#### 4. Update Note
+
+```http
+PUT /api/notes/:noteId
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+
+{
+  "noteTitle": "Updated Title",
+  "noteContent": "Updated content...",
+  "noteTags": ["updated", "tags"],
+  "isNotePinned": true,
+  "isNoteArchived": false
+}
+```
+
+#### 5. Delete Note
+
+```http
+DELETE /api/notes/:noteId
+Authorization: Bearer <jwt_token>
+```
+
+#### 6. Search Notes
+
+```http
+GET /api/notes/search?q=search_term
+Authorization: Bearer <jwt_token>
+```
+
+#### 7. Get Note Statistics
+
+```http
+GET /api/notes/stats
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Note statistics retrieved successfully",
+  "data": {
+    "statistics": {
+      "totalNotes": 25,
+      "pinnedNotes": 3,
+      "archivedNotes": 5,
+      "totalTags": 12
+    },
+    "popularTags": [
+      { "tag": "work", "count": 8 },
+      { "tag": "personal", "count": 6 },
+      { "tag": "urgent", "count": 4 }
+    ]
+  }
+}
+```
+
+#### 8. Toggle Note Pin
+
+```http
+PATCH /api/notes/:noteId/pin
+Authorization: Bearer <jwt_token>
+```
+
+#### 9. Toggle Note Archive
+
+```http
+PATCH /api/notes/:noteId/archive
+Authorization: Bearer <jwt_token>
+```
+
 ## 🔐 Authentication
 
 ### JWT Token Usage
@@ -290,51 +442,32 @@ Authorization: Bearer <your_jwt_token>
 - **General API**: 100 requests per 15 minutes
 - **Authentication**: 5 requests per 15 minutes
 
-## 🧪 Testing
+## 🌐 Frontend Interface
 
-### Manual Testing with cURL
+The project includes a beautiful, responsive web interface located in the `public/` directory:
 
-1. **Register a new user:**
+### Features:
 
-   ```bash
-   curl -X POST http://localhost:3000/api/auth/signup \
-     -H "Content-Type: application/json" \
-     -d '{
-       "fullName": "Test User",
-       "emailAddress": "test@example.com",
-       "phoneNumber": "+1234567890",
-       "password": "TestPass123!"
-     }'
-   ```
+- **User Authentication** - Login and signup forms
+- **Note Management** - Create, edit, delete, and organize notes
+- **Tag System** - Add tags and filter notes by tags
+- **Search Functionality** - Search through note titles and content
+- **Note Statistics** - View your note statistics and popular tags
+- **Responsive Design** - Works on desktop and mobile devices
+- **Real-time Updates** - Dynamic content updates using Fetch API
 
-2. **Verify email with OTP:**
+### Access the Frontend:
 
-   ```bash
-   curl -X POST http://localhost:3000/api/auth/verify-otp \
-     -H "Content-Type: application/json" \
-     -d '{
-       "emailAddress": "test@example.com",
-       "otpCode": "123456"
-     }'
-   ```
+1. Start the server: `npm run dev`
+2. Open your browser: `http://localhost:3000`
+3. The frontend will be served automatically from the `public/` directory
 
-3. **Login:**
+### Frontend Technologies:
 
-   ```bash
-   curl -X POST http://localhost:3000/api/auth/login \
-     -H "Content-Type: application/json" \
-     -d '{
-       "emailAddress": "test@example.com",
-       "password": "TestPass123!"
-     }'
-   ```
-
-4. **Access protected route:**
-
-```bash
-   curl -X GET http://localhost:3000/api/auth/protected \
-     -H "Authorization: Bearer <your_jwt_token>"
-```
+- **Vanilla JavaScript** - No frameworks, pure JS with Fetch API
+- **CSS3** - Modern styling with gradients and animations
+- **Responsive Design** - Mobile-first approach
+- **Local Storage** - JWT token persistence
 
 ## 🛡️ Security Best Practices
 
@@ -354,17 +487,6 @@ Authorization: Bearer <your_jwt_token>
 2. Generate an App Password
 3. Use the App Password in `EMAIL_PASS`
 
-### Other Email Services
-
-Update the SMTP configuration in `.env`:
-
-```env
-EMAIL_HOST=smtp.your-provider.com
-EMAIL_PORT=587
-EMAIL_USER=your-email@domain.com
-EMAIL_PASS=your-password
-```
-
 ## 🚀 Deployment
 
 ### Environment Variables for Production
@@ -379,16 +501,6 @@ EMAIL_USER=your-production-email
 EMAIL_PASS=your-production-app-password
 ```
 
-### Docker Support (Optional)
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
 ```
 
 ## 🤝 Contributing
@@ -414,3 +526,4 @@ For support and questions:
 ---
 
 **Happy Coding! 🎉**
+```
