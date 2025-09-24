@@ -1,151 +1,151 @@
 # 📝 Notes App API
 
-A robust and secure REST API for a notes application with comprehensive user authentication, email verification, and JWT-based authorization.
+A comprehensive notes management API built with Node.js, Express, and MongoDB. Features user authentication with JWT, email OTP verification, full CRUD operations for notes, tag filtering, and a modern frontend interface.
 
 ## 🚀 Features
 
-### ✅ Authentication System
+### Authentication & Security
 
-- **User Registration** with email, phone, and password validation
-- **Email OTP Verification** for secure account activation
-- **JWT-based Login** with secure token generation
-- **Password Hashing** using bcrypt with 12 rounds
-- **Protected Routes** with authentication middleware
-- **Rate Limiting** for security and abuse prevention
+- **User Registration** with phone number validation
+- **Email OTP Verification** for account activation
+- **JWT Authentication** with Bearer token
+- **Password Hashing** using bcrypt
+- **Rate Limiting** for security
+- **Input Validation** with express-validator
+- **CORS Protection** and security headers
 
-### 📝 Notes Management
+### Notes Management
 
-- **Full CRUD Operations** for notes (Create, Read, Update, Delete)
-- **Tag System** for organizing and categorizing notes
+- **Full CRUD Operations** (Create, Read, Update, Delete)
 - **Tag Filtering** with single and multiple tag support
-- **Search Functionality** across note titles and content
-- **Note Pinning** for important notes
-- **Note Archiving** for better organization
-- **Owner Validation** - users can only access their own notes
-- **Timestamps** with automatic created/updated tracking
+- **Note Search** by title and content
+- **Note Statistics** and analytics
+- **Pin/Unpin** functionality
+- **Archive/Unarchive** notes
+- **Owner-based Access Control**
 
-### 🔒 Security Features
+### Frontend Integration
 
-- **Helmet.js** for security headers
-- **CORS** configuration for cross-origin requests
-- **Input Validation** using express-validator
-- **Password Strength** requirements
-- **Account Status** management
-- **Request ID** tracking for debugging
-
-### 📧 Email Service
-
-- **OTP Generation** and verification
-- **Welcome Emails** after successful registration
-- **HTML Email Templates** with responsive design
-- **Configurable Email Service** (Gmail, SMTP)
-
-## 🛠️ Technology Stack
-
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **MongoDB** - Database
-- **Mongoose** - ODM for MongoDB
-- **JWT** - Authentication tokens
-- **bcryptjs** - Password hashing
-- **Nodemailer** - Email service
-- **express-validator** - Input validation
-- **Helmet** - Security middleware
-- **CORS** - Cross-origin resource sharing
+- **Complete Testing Interface** with all API endpoints
+- **Real-time Note Management** using Fetch API with headers
+- **JWT Token Handling** with automatic authentication
+- **Form Validation** and comprehensive error handling
+- **Dynamic Content Loading** with loading states
+- **Response Logging** for API debugging
 
 ## 📁 Project Structure
 
 ```
-backend/
-├── config/
-│   └── database.js          # MongoDB connection configuration
-├── controllers/
-│   └── authController.js    # Authentication logic
-├── middleware/
-│   └── authMiddleware.js    # JWT authentication middleware
-├── models/
-│   └── User.js              # User schema and methods
-├── routes/
-│   └── authRoutes.js        # Authentication routes
-├── utils/
-│   └── emailService.js      # Email service for OTP
-├── .env                     # Environment variables
-├── .gitignore              # Git ignore rules
-├── package.json            # Dependencies and scripts
-└── server.js               # Express server setup
+notes-app/
+├── backend/
+│   ├── config/
+│   │   └── database.js          # MongoDB connection
+│   ├── controllers/
+│   │   ├── authController.js    # Authentication logic
+│   │   └── noteController.js    # Notes CRUD operations
+│   ├── middleware/
+│   │   └── authMiddleware.js     # JWT authentication
+│   ├── models/
+│   │   ├── User.js              # User schema
+│   │   └── Note.js              # Note schema
+│   ├── routes/
+│   │   ├── authRoutes.js        # Authentication routes
+│   │   └── noteRoutes.js        # Notes routes
+│   ├── utils/
+│   │   └── emailService.js      # Email OTP service
+│   ├── .env                      # Environment variables
+│   ├── package.json              # Dependencies
+│   └── server.js                 # Main server file
+├── public/
+│   ├── index.html                # Frontend testing interface
+│   ├── script.js                 # Complete API testing functionality
+│   └── styles.css                # Modern responsive styling
+└── README.md                     # This file
 ```
 
-## 🚀 Quick Start
+## 🛠️ Installation & Setup
 
 ### Prerequisites
 
-- Node.js (>= 14.0.0)
-- MongoDB (local or cloud instance)
-- Email service credentials (Gmail recommended)
+- Node.js (v14+)
+- MongoDB Atlas account or local MongoDB
+- Gmail account for email OTP
 
-### Installation
+### 1. Clone the Repository
 
-1. **Clone the repository**
+```bash
+git clone https://github.com/dazeez1/notes-app.git
+cd notes-app
+```
 
-   ```bash
-   git clone <repository-url>
-   cd notes-app-api
-   ```
+### 2. Install Dependencies
 
-2. **Install dependencies**
+```bash
+cd backend
+npm install
+```
 
-   ```bash
-   npm install
-   ```
+### 3. Environment Configuration
 
-3. **Environment Setup**
+Create a `.env` file in the `backend` directory:
 
-   ```bash
-   cp env.example .env
-   ```
+```env
+# Server Configuration
+PORT=3000
+NODE_ENV=development
 
-   Update `.env` with your configuration:
+# Database Configuration
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/notes-app
+MONGODB_URI_TEST=mongodb://localhost:27017/notes-app-test
 
-   ```env
-   # Server Configuration
-   PORT=3000
-   NODE_ENV=development
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-here
+JWT_EXPIRES_IN=7d
 
-   # Database Configuration
-   MONGODB_URI=mongodb://localhost:27017/notes-app
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
 
-   # JWT Configuration
-   JWT_SECRET=your-super-secret-jwt-key-here
-   JWT_EXPIRES_IN=7d
+# CORS Configuration
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
 
-   # Email Configuration
-   EMAIL_SERVICE=gmail
-   EMAIL_USER=your-email@gmail.com
-   EMAIL_PASS=your-app-password
-   EMAIL_FROM=Notes App <noreply@notesapp.com>
-   ```
+# Security
+BCRYPT_ROUNDS=12
 
-4. **Start the server**
+# Email Configuration (for OTP verification)
+EMAIL_SERVICE=gmail
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-password
+EMAIL_FROM=Notes App <noreply@notesapp.com>
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+```
 
-   ```bash
-   # Development mode
-   npm run dev
+### 4. Start the Server
 
-   # Production mode
-   npm start
-   ```
+```bash
+npm start
+# or for development
+npm run dev
+```
+
+### 5. Access the Application
+
+- **Frontend Interface**: http://localhost:3000/
+- **API Documentation**: http://localhost:3000/ (JSON format)
+- **Health Check**: http://localhost:3000/health
 
 ## 📚 API Documentation
 
 ### Base URL
 
 ```
-http://localhost:3000
+http://localhost:3000/api
 ```
 
 ### Authentication Endpoints
 
-#### 1. User Registration
+#### Register User
 
 ```http
 POST /api/auth/signup
@@ -154,7 +154,7 @@ Content-Type: application/json
 {
   "fullName": "John Doe",
   "emailAddress": "john@example.com",
-  "phoneNumber": "+1234567890",
+  "phoneNumber": "1234567890",
   "password": "SecurePass123!"
 }
 ```
@@ -170,9 +170,8 @@ Content-Type: application/json
       "id": "user_id",
       "fullName": "John Doe",
       "emailAddress": "john@example.com",
-      "phoneNumber": "+1234567890",
-      "isEmailVerified": false,
-      "accountCreatedAt": "2024-01-01T00:00:00.000Z"
+      "phoneNumber": "1234567890",
+      "isEmailVerified": false
     },
     "emailSent": true,
     "requiresEmailVerification": true
@@ -180,7 +179,7 @@ Content-Type: application/json
 }
 ```
 
-#### 2. Email OTP Verification
+#### Verify Email OTP
 
 ```http
 POST /api/auth/verify-otp
@@ -192,28 +191,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Email verified successfully. Welcome to Notes App!",
-  "data": {
-    "user": {
-      "id": "user_id",
-      "fullName": "John Doe",
-      "emailAddress": "john@example.com",
-      "phoneNumber": "+1234567890",
-      "isEmailVerified": true,
-      "accountCreatedAt": "2024-01-01T00:00:00.000Z"
-    },
-    "authToken": "jwt_token_here",
-    "tokenType": "Bearer"
-  }
-}
-```
-
-#### 3. User Login
+#### Login User
 
 ```http
 POST /api/auth/login
@@ -236,10 +214,8 @@ Content-Type: application/json
       "id": "user_id",
       "fullName": "John Doe",
       "emailAddress": "john@example.com",
-      "phoneNumber": "+1234567890",
-      "isEmailVerified": true,
-      "accountCreatedAt": "2024-01-01T00:00:00.000Z",
-      "lastLoginAt": "2024-01-01T12:00:00.000Z"
+      "phoneNumber": "1234567890",
+      "isEmailVerified": true
     },
     "authToken": "jwt_token_here",
     "tokenType": "Bearer"
@@ -247,40 +223,16 @@ Content-Type: application/json
 }
 ```
 
-#### 4. Get Current User Profile
+#### Get User Profile
 
 ```http
 GET /api/auth/me
 Authorization: Bearer <jwt_token>
 ```
 
-#### 5. Test Protected Route
-
-```http
-GET /api/auth/protected
-Authorization: Bearer <jwt_token>
-```
-
-#### 6. Resend OTP
-
-```http
-POST /api/auth/resend-otp
-Content-Type: application/json
-
-{
-  "emailAddress": "john@example.com"
-}
-```
-
-### Health Check
-
-```http
-GET /health
-```
-
 ### Notes Endpoints
 
-#### 1. Create Note
+#### Create Note
 
 ```http
 POST /api/notes
@@ -288,35 +240,13 @@ Authorization: Bearer <jwt_token>
 Content-Type: application/json
 
 {
-  "noteTitle": "My Important Note",
-  "noteContent": "This is the content of my note...",
-  "noteTags": ["work", "urgent", "meeting"]
+  "noteTitle": "My First Note",
+  "noteContent": "This is the content of my note",
+  "noteTags": ["work", "important"]
 }
 ```
 
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Note created successfully",
-  "data": {
-    "note": {
-      "_id": "note_id",
-      "noteTitle": "My Important Note",
-      "noteContent": "This is the content of my note...",
-      "noteTags": ["work", "urgent", "meeting"],
-      "noteOwner": "user_id",
-      "isNotePinned": false,
-      "isNoteArchived": false,
-      "noteCreatedAt": "2024-01-01T00:00:00.000Z",
-      "noteUpdatedAt": "2024-01-01T00:00:00.000Z"
-    }
-  }
-}
-```
-
-#### 2. Get All Notes
+#### Get All Notes
 
 ```http
 GET /api/notes
@@ -325,28 +255,27 @@ Authorization: Bearer <jwt_token>
 
 **Query Parameters:**
 
-- `tag` - Filter by single tag
-- `tags` - Filter by multiple tags (comma-separated)
-- `limit` - Number of notes to return (default: 50)
-- `skip` - Number of notes to skip (default: 0)
-- `includeArchived` - Include archived notes (default: false)
+- `tag` - Filter by single tag: `?tag=work`
+- `tags` - Filter by multiple tags: `?tags=work,urgent`
+- `limit` - Number of notes per page: `?limit=10`
+- `skip` - Number of notes to skip: `?skip=0`
+- `includeArchived` - Include archived notes: `?includeArchived=true`
 
-**Examples:**
+**Example:**
 
 ```http
-GET /api/notes?tag=work
-GET /api/notes?tags=work,urgent
-GET /api/notes?limit=10&skip=0
+GET /api/notes?tag=work&limit=10&skip=0
+Authorization: Bearer <jwt_token>
 ```
 
-#### 3. Get Note by ID
+#### Get Single Note
 
 ```http
 GET /api/notes/:noteId
 Authorization: Bearer <jwt_token>
 ```
 
-#### 4. Update Note
+#### Update Note
 
 ```http
 PUT /api/notes/:noteId
@@ -355,137 +284,144 @@ Content-Type: application/json
 
 {
   "noteTitle": "Updated Title",
-  "noteContent": "Updated content...",
+  "noteContent": "Updated content",
   "noteTags": ["updated", "tags"],
   "isNotePinned": true,
   "isNoteArchived": false
 }
 ```
 
-#### 5. Delete Note
+#### Delete Note
 
 ```http
 DELETE /api/notes/:noteId
 Authorization: Bearer <jwt_token>
 ```
 
-#### 6. Search Notes
+#### Search Notes
 
 ```http
 GET /api/notes/search?q=search_term
 Authorization: Bearer <jwt_token>
 ```
 
-#### 7. Get Note Statistics
+#### Get Note Statistics
 
 ```http
 GET /api/notes/stats
 Authorization: Bearer <jwt_token>
 ```
 
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Note statistics retrieved successfully",
-  "data": {
-    "statistics": {
-      "totalNotes": 25,
-      "pinnedNotes": 3,
-      "archivedNotes": 5,
-      "totalTags": 12
-    },
-    "popularTags": [
-      { "tag": "work", "count": 8 },
-      { "tag": "personal", "count": 6 },
-      { "tag": "urgent", "count": 4 }
-    ]
-  }
-}
-```
-
-#### 8. Toggle Note Pin
+#### Toggle Note Pin
 
 ```http
 PATCH /api/notes/:noteId/pin
 Authorization: Bearer <jwt_token>
 ```
 
-#### 9. Toggle Note Archive
+#### Toggle Note Archive
 
 ```http
 PATCH /api/notes/:noteId/archive
 Authorization: Bearer <jwt_token>
 ```
 
-## 🔐 Authentication
+## 🔒 Security Features
 
-### JWT Token Usage
+### Authentication
 
-Include the JWT token in the Authorization header:
-
-```http
-Authorization: Bearer <your_jwt_token>
-```
-
-### Password Requirements
-
-- Minimum 8 characters
-- At least one uppercase letter
-- At least one lowercase letter
-- At least one number
-- At least one special character
+- JWT tokens with 7-day expiration
+- Password hashing with bcrypt (12 rounds)
+- Email verification required for account activation
 
 ### Rate Limiting
 
-- **General API**: 100 requests per 15 minutes
-- **Authentication**: 5 requests per 15 minutes
+- General API: 100 requests per 15 minutes
+- Authentication routes: 50 requests per 15 minutes
 
-## 🌐 Frontend Interface
+### Input Validation
 
-The project includes a beautiful, responsive web interface located in the `public/` directory:
+- Email format validation
+- Phone number format validation
+- Password strength requirements
+- Note title/content length limits
+- Tag format validation
 
-### Features:
+### Security Headers
 
-- **User Authentication** - Login and signup forms
-- **Note Management** - Create, edit, delete, and organize notes
-- **Tag System** - Add tags and filter notes by tags
-- **Search Functionality** - Search through note titles and content
-- **Note Statistics** - View your note statistics and popular tags
-- **Responsive Design** - Works on desktop and mobile devices
-- **Real-time Updates** - Dynamic content updates using Fetch API
+- CORS protection
+- Helmet security headers
+- Request ID tracking
 
-### Access the Frontend:
+## 🎯 Usage Examples
 
-1. Start the server: `npm run dev`
-2. Open your browser: `http://localhost:3000`
-3. The frontend will be served automatically from the `public/` directory
+### Frontend Web Interface
 
-### Frontend Technologies:
+Access the complete testing interface at **http://localhost:3000/**
 
-- **Vanilla JavaScript** - No frameworks, pure JS with Fetch API
-- **CSS3** - Modern styling with gradients and animations
-- **Responsive Design** - Mobile-first approach
-- **Local Storage** - JWT token persistence
+#### ✨ Features Available:
 
-## 🛡️ Security Best Practices
+- **🔐 Authentication**: Full signup/login flow with OTP verification
+- **📝 Notes Management**: Create, edit, delete, pin, archive notes
+- **🔍 Search & Filter**: Real-time search and tag filtering
+- **📊 Statistics**: View note statistics and analytics
+- **🧪 API Testing**: Test all endpoints with live responses
+- **📋 Response Logging**: Debug API calls in real-time
 
-1. **Environment Variables**: Never commit `.env` files
-2. **JWT Secret**: Use a strong, random secret key
-3. **Password Hashing**: bcrypt with 12 rounds minimum
-4. **Rate Limiting**: Prevents brute force attacks
-5. **Input Validation**: All inputs are validated and sanitized
-6. **CORS**: Configured for specific origins
-7. **Security Headers**: Helmet.js provides comprehensive protection
+#### 📱 Form Validation:
 
-## 📧 Email Configuration
+- **Name**: 2-50 characters, letters/spaces/hyphens/apostrophes only
+- **Email**: Valid email format required
+- **Phone**: Valid international phone number format
+- **Password**: Minimum 8 characters, must include uppercase, lowercase, and number
+- **Note Title**: 1-100 characters, alphanumeric with common punctuation
+- **Note Content**: 1-10,000 characters
+- **Tags**: Max 10 tags, 1-20 characters each, letters/numbers/hyphens only
 
-### Gmail Setup
+### API Testing with cURL
 
-1. Enable 2-factor authentication
-2. Generate an App Password
-3. Use the App Password in `EMAIL_PASS`
+#### Login and Get Token
+
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"emailAddress":"test@example.com","password":"TestPass123!"}'
+```
+
+#### Create Note with Tags
+
+```bash
+curl -X POST http://localhost:3000/api/notes \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"noteTitle":"My Note","noteContent":"Note content","noteTags":["work","urgent"]}'
+```
+
+#### Filter Notes by Tags
+
+```bash
+curl -X GET "http://localhost:3000/api/notes?tag=work" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## 🧪 Testing
+
+### Manual Testing
+
+1. **Register** a new user account using the signup endpoint
+2. **Check email** for OTP verification code
+3. **Verify email** with OTP using the verify-otp endpoint
+4. **Login** with credentials to get JWT token
+5. **Create notes** with different tags using the notes endpoint
+6. **Filter notes** by tags using query parameters
+7. **Update and delete** notes using their IDs
+
+### Test Credentials
+
+For testing purposes, you can use:
+
+- **Email**: test@example.com
+- **Password**: TestPass123!
 
 ## 🚀 Deployment
 
@@ -493,15 +429,58 @@ The project includes a beautiful, responsive web interface located in the `publi
 
 ```env
 NODE_ENV=production
-PORT=3000
-MONGODB_URI=mongodb://your-production-db
-JWT_SECRET=your-super-secure-production-secret
-EMAIL_SERVICE=gmail
-EMAIL_USER=your-production-email
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/notes-app-prod
+JWT_SECRET=your-production-jwt-secret
+EMAIL_USER=your-production-email@gmail.com
 EMAIL_PASS=your-production-app-password
 ```
 
+### MongoDB Atlas Setup
+
+1. Create a MongoDB Atlas cluster
+2. Configure network access (IP whitelist)
+3. Create database user with read/write permissions
+4. Update `MONGODB_URI` in environment variables
+
+## 📝 API Response Format
+
+All API responses follow this format:
+
+```json
+{
+  "success": true|false,
+  "message": "Human readable message",
+  "data": {
+    // Response data here
+  },
+  "error": "ERROR_CODE" // Only present on errors
+}
 ```
+
+## 🔧 Development
+
+### Available Scripts
+
+```bash
+npm start          # Start production server
+npm run dev        # Start development server with nodemon
+npm test           # Run tests
+npm run lint       # Run ESLint
+npm run format     # Format code with Prettier
+```
+
+### Database Indexes
+
+The application includes optimized MongoDB indexes:
+
+- User email and phone number (unique)
+- Note owner and tags (compound)
+- Note creation date (for sorting)
+- Text search on title and content
+
+## 📄 License
+
+This project is licensed under the MIT License.
 
 ## 🤝 Contributing
 
@@ -511,19 +490,13 @@ EMAIL_PASS=your-production-app-password
 4. Push to the branch
 5. Create a Pull Request
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
+## 📞 Support
 
 For support and questions:
 
-- Create an issue in the repository
-- Check the API documentation
-- Review the error messages for debugging
+- Create an issue on GitHub
+- Email: support@notesapp.com
 
 ---
 
-**Happy Coding! 🎉**
-```
+**Built with ❤️ by Dazeez**

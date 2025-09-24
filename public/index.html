@@ -3,335 +3,198 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="A modern, secure notes application for creating, organizing, and managing your personal notes with tags, search, and more."
-    />
-    <meta
-      name="keywords"
-      content="notes, note-taking, productivity, organization, tags, search"
-    />
-    <title>📝 Notes App - Your Personal Note Manager</title>
+    <title>📝 Notes App</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="container">
+    <div class="container">
       <header class="header">
         <h1>📝 Notes App</h1>
-        <p>
-          Your Personal Note Manager - Create, Organize, and Manage Your Notes
-        </p>
       </header>
 
       <!-- Authentication Section -->
-      <section id="loginSection" class="card">
-        <h2>🔐 Login to Your Account</h2>
-        <div id="loginAlert" role="alert" aria-live="polite"></div>
-        <form id="loginForm" novalidate>
-          <div class="form-group">
-            <label for="email">Email Address:</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              required
-              placeholder="Enter your email"
-              autocomplete="email"
-            />
-          </div>
-          <div class="form-group">
-            <label for="password">Password:</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              required
-              placeholder="Enter your password"
-              autocomplete="current-password"
-            />
-          </div>
-          <button type="submit" class="btn">Login</button>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            onclick="showSignup()"
-          >
-            Sign Up Instead
-          </button>
-        </form>
-      </section>
+      <section id="authSection" class="card">
+        <h2 id="authSectionTitle">Authentication</h2>
+        <div id="authAlert"></div>
 
-      <!-- Signup Section -->
-      <section id="signupSection" class="card hidden">
-        <h2>📝 Create New Account</h2>
-        <div id="signupAlert" role="alert" aria-live="polite"></div>
-        <form id="signupForm" novalidate>
-          <div class="form-group">
-            <label for="signupName">Full Name:</label>
-            <input
-              type="text"
-              id="signupName"
-              name="fullName"
-              required
-              placeholder="Enter your full name"
-              autocomplete="name"
-            />
-          </div>
-          <div class="form-group">
-            <label for="signupEmail">Email Address:</label>
-            <input
-              type="email"
-              id="signupEmail"
-              name="email"
-              required
-              placeholder="Enter your email"
-              autocomplete="email"
-            />
-          </div>
-          <div class="form-group">
-            <label for="signupPhone">Phone Number:</label>
-            <input
-              type="tel"
-              id="signupPhone"
-              name="phone"
-              required
-              placeholder="Enter your phone number"
-              autocomplete="tel"
-            />
-          </div>
-          <div class="form-group">
-            <label for="signupPassword">Password:</label>
-            <input
-              type="password"
-              id="signupPassword"
-              name="password"
-              required
-              placeholder="Create a strong password"
-              autocomplete="new-password"
-            />
-          </div>
-          <button type="submit" class="btn">Sign Up</button>
-          <button type="button" class="btn btn-secondary" onclick="showLogin()">
-            Login Instead
-          </button>
-        </form>
-      </section>
-
-      <!-- OTP Verification Section -->
-      <section id="otpSection" class="card hidden">
-        <h2>📧 Verify Your Email</h2>
-        <div id="otpAlert" role="alert" aria-live="polite"></div>
-        <p>We've sent a verification code to <strong id="otpEmail"></strong></p>
-        <form id="otpForm" novalidate>
-          <div class="form-group">
-            <label for="otpCode">Verification Code:</label>
-            <input
-              type="text"
-              id="otpCode"
-              name="otpCode"
-              required
-              placeholder="Enter 6-digit code"
-              maxlength="6"
-              pattern="[0-9]{6}"
-              autocomplete="one-time-code"
-            />
-          </div>
-          <button type="submit" class="btn">Verify Email</button>
-          <button type="button" class="btn btn-secondary" onclick="resendOtp()">
-            Resend Code
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            onclick="showSignup()"
-          >
-            Back to Signup
-          </button>
-        </form>
-      </section>
-
-      <!-- Main App Section -->
-      <section id="appSection" class="hidden">
-        <!-- User Info -->
-        <div class="card">
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            "
-          >
-            <div>
-              <h2>👋 Welcome, <span id="userName"></span>!</h2>
-              <p id="userEmail"></p>
-            </div>
-            <button class="btn btn-secondary" onclick="logout()">Logout</button>
-          </div>
-        </div>
-
-        <!-- Stats Section -->
-        <div id="statsSection" class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-number" id="totalNotes">0</div>
-            <div class="stat-label">Total Notes</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-number" id="pinnedNotes">0</div>
-            <div class="stat-label">Pinned Notes</div>
-          </div>
-        </div>
-
-        <!-- Create Note Section -->
-        <div class="card">
-          <h2>✏️ Create New Note</h2>
-          <div id="noteAlert" role="alert" aria-live="polite"></div>
-          <form id="noteForm" novalidate>
+        <!-- Login Form -->
+        <div id="loginForm">
+          <h3>Login</h3>
+          <form id="loginFormElement">
             <div class="form-group">
-              <label for="noteTitle">Note Title:</label>
+              <label for="loginEmail">Email:</label>
+              <input type="email" id="loginEmail" required />
+              <div class="error-message" id="loginEmailError"></div>
+            </div>
+            <div class="form-group">
+              <label for="loginPassword">Password:</label>
+              <input type="password" id="loginPassword" required />
+              <div class="error-message" id="loginPasswordError"></div>
+            </div>
+            <button type="submit">Login</button>
+          </form>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupForm">
+          <h3>Sign Up</h3>
+          <form id="signupFormElement">
+            <div class="form-group">
+              <label for="signupName">Full Name:</label>
+              <input
+                type="text"
+                id="signupName"
+                required
+                minlength="2"
+                maxlength="50"
+              />
+              <small>2-40 characters, letters, spaces. only</small>
+              <div class="error-message" id="signupNameError"></div>
+            </div>
+            <div class="form-group">
+              <label for="signupEmail">Email:</label>
+              <input type="email" id="signupEmail" required />
+              <div class="error-message" id="signupEmailError"></div>
+            </div>
+            <div class="form-group">
+              <label for="signupPhone">Phone Number:</label>
+              <input
+                type="tel"
+                id="signupPhone"
+                required
+                pattern="^[\+]?[0-9][\d]{0,15}$"
+              />
+              <small>Valid phone number format</small>
+              <div class="error-message" id="signupPhoneError"></div>
+            </div>
+            <div class="form-group">
+              <label for="signupPassword">Password:</label>
+              <input
+                type="password"
+                id="signupPassword"
+                required
+                minlength="8"
+              />
+              <small
+                >Minimum 8 characters, must include uppercase, lowercase, and
+                number</small
+              >
+              <div class="error-message" id="signupPasswordError"></div>
+            </div>
+            <button type="submit">Sign Up</button>
+          </form>
+        </div>
+
+        <!-- OTP Verification -->
+        <div id="otpForm" style="display: none">
+          <h3>Email Verification</h3>
+          <p>Check your email for the OTP code</p>
+          <form id="otpFormElement">
+            <div class="form-group">
+              <label for="otpCode">OTP Code:</label>
+              <input
+                type="text"
+                id="otpCode"
+                required
+                pattern="[0-9]{6}"
+                maxlength="6"
+              />
+              <div class="error-message" id="otpCodeError"></div>
+            </div>
+            <button type="submit">Verify</button>
+            <button type="button" id="resendOtp">Resend OTP</button>
+          </form>
+        </div>
+
+        <!-- User Info -->
+        <div id="userInfo" style="display: none">
+          <h3>Logged In User</h3>
+          <div id="userDetails"></div>
+          <button id="logoutBtn">Logout</button>
+        </div>
+      </section>
+
+      <!-- Notes Management Section -->
+      <section id="notesSection" class="card" style="display: none">
+        <h2>📝 Notes Management</h2>
+        <div id="notesAlert"></div>
+
+        <!-- Create Note Form -->
+        <div class="form-section">
+          <h3>Create New Note</h3>
+          <form id="createNoteForm">
+            <div class="form-group">
+              <label for="noteTitle">Title:</label>
               <input
                 type="text"
                 id="noteTitle"
-                name="noteTitle"
                 required
-                placeholder="Enter note title"
-                autocomplete="off"
+                minlength="1"
+                maxlength="100"
               />
+              <small>1-100 characters</small>
+              <div class="error-message" id="noteTitleError"></div>
             </div>
             <div class="form-group">
-              <label for="noteContent">Note Content:</label>
+              <label for="noteContent">Content:</label>
               <textarea
                 id="noteContent"
-                name="noteContent"
                 required
-                placeholder="Write your note content here..."
-                autocomplete="off"
+                minlength="1"
+                maxlength="10000"
               ></textarea>
+              <small>1-10,000 characters</small>
+              <div class="error-message" id="noteContentError"></div>
             </div>
             <div class="form-group">
               <label for="noteTags">Tags (comma-separated):</label>
               <input
                 type="text"
                 id="noteTags"
-                name="noteTags"
                 placeholder="work, urgent, personal"
-                autocomplete="off"
               />
+              <small>Optional, 1-20 characters each, max 10 tags</small>
+              <div class="error-message" id="noteTagsError"></div>
             </div>
-            <button type="submit" class="btn">Create Note</button>
+            <button type="submit">Create Note</button>
           </form>
         </div>
 
-        <!-- Filters and Search -->
-        <div class="card">
-          <h3>🔍 Search & Filter Notes</h3>
-          <div class="filters">
-            <div class="filter-group">
+        <!-- Notes Controls -->
+        <div class="controls-section">
+          <h3>Notes Controls</h3>
+          <div class="controls">
+            <div class="form-group">
+              <label for="searchQuery">Search:</label>
               <input
                 type="text"
-                id="searchInput"
-                class="search-box"
+                id="searchQuery"
                 placeholder="Search notes..."
               />
-              <button class="btn btn-small" onclick="searchNotes()">
-                Search
-              </button>
+              <button type="button" id="searchBtn">Search</button>
             </div>
-            <div class="filter-group">
-              <select id="tagFilter">
-                <option value="">All Tags</option>
-              </select>
-              <button class="btn btn-small" onclick="filterByTag()">
-                Filter
-              </button>
+            <div class="form-group">
+              <label for="tagFilter">Filter by Tag:</label>
+              <input type="text" id="tagFilter" placeholder="work" />
+              <button type="button" id="filterBtn">Filter</button>
             </div>
-            <button class="btn btn-small" onclick="loadNotes()">Refresh</button>
+            <div class="form-group">
+              <label for="tagsFilter">Filter by Multiple Tags:</label>
+              <input type="text" id="tagsFilter" placeholder="work,urgent" />
+              <button type="button" id="tagsFilterBtn">Filter Multiple</button>
+            </div>
+            <button type="button" id="refreshBtn">Refresh All Notes</button>
+            <button type="button" id="statsBtn">Get Statistics</button>
           </div>
         </div>
 
         <!-- Notes Display -->
-        <div class="card">
-          <h3>📋 Your Notes</h3>
-          <div
-            id="notesLoading"
-            class="loading hidden"
-            role="status"
-            aria-live="polite"
-          >
-            <div class="spinner"></div>
-            <p>Loading notes...</p>
-          </div>
-          <div
-            id="notesContainer"
-            class="notes-grid"
-            role="main"
-            aria-label="Notes list"
-          ></div>
+        <div class="notes-section">
+          <h3>Notes List</h3>
+          <div id="notesList"></div>
+          <div id="notesStats" style="display: none"></div>
         </div>
       </section>
-    </main>
-
-    <!-- Edit Note Modal -->
-    <div id="editModal" class="modal hidden">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>✏️ Edit Note</h2>
-          <button class="modal-close" onclick="closeEditModal()">
-            &times;
-          </button>
-        </div>
-        <div id="editAlert" role="alert" aria-live="polite"></div>
-        <form id="editForm" novalidate>
-          <div class="form-group">
-            <label for="editTitle">Note Title:</label>
-            <input
-              type="text"
-              id="editTitle"
-              name="editTitle"
-              required
-              placeholder="Enter note title"
-              autocomplete="off"
-            />
-          </div>
-          <div class="form-group">
-            <label for="editContent">Note Content:</label>
-            <textarea
-              id="editContent"
-              name="editContent"
-              required
-              placeholder="Write your note content here..."
-              autocomplete="off"
-            ></textarea>
-          </div>
-          <div class="form-group">
-            <label for="editTags">Tags (comma-separated):</label>
-            <input
-              type="text"
-              id="editTags"
-              name="editTags"
-              placeholder="work, urgent, personal"
-              autocomplete="off"
-            />
-          </div>
-          <div class="modal-actions">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              onclick="closeEditModal()"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn">Update Note</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Keyboard Shortcuts Help -->
-    <div id="keyboardShortcuts" class="keyboard-shortcuts">
-      <div><kbd>Ctrl/Cmd</kbd> + <kbd>K</kbd> - Search</div>
-      <div><kbd>Ctrl/Cmd</kbd> + <kbd>N</kbd> - New Note</div>
-      <div><kbd>Esc</kbd> - Clear Search</div>
-    </div>
 
     <script src="script.js"></script>
   </body>

@@ -23,92 +23,23 @@ const NODE_ENV = process.env.NODE_ENV || "development";
  * Security Middleware Configuration
  */
 
-// Helmet for security headers
+// Helmet for security headers - disabled for development
+// app.use(helmet());
+
+// CORS configuration - permissive for development
 app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
-    },
-    crossOriginEmbedderPolicy: false,
+  cors({
+    origin: true, // Allow all origins
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
 
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(",")
-      : [
-          "http://localhost:3000",
-          "http://localhost:3001",
-          "http://localhost:8080",
-          "http://127.0.0.1:3000",
-          "http://127.0.0.1:5500",
-          "http://127.0.0.1:8080",
-          "http://localhost:5500",
-        ];
-
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-
-    // Allow same-origin requests (when frontend and backend are on same port)
-    if (
-      origin === `http://localhost:${PORT}` ||
-      origin === `http://127.0.0.1:${PORT}` ||
-      origin === `http://localhost:5500` ||
-      origin === `http://127.0.0.1:5500` ||
-      origin === `http://localhost:8080` ||
-      origin === `http://127.0.0.1:8080`
-    ) {
-      return callback(null, true);
-    }
-
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log(`CORS blocked origin: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-};
-
-app.use(cors(corsOptions));
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
-  message: {
-    success: false,
-    message: "Too many requests from this IP, please try again later.",
-    error: "RATE_LIMIT_EXCEEDED",
-  },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
-
-app.use(limiter);
-
-// Stricter rate limiting for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP to 50 requests per windowMs for auth routes (increased for development)
-  message: {
-    success: false,
-    message: "Too many authentication attempts, please try again later.",
-    error: "AUTH_RATE_LIMIT_EXCEEDED",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Rate limiting - disabled for development
+// const limiter = rateLimit({...});
+// app.use(limiter);
+// const authLimiter = rateLimit({...});
 
 /**
  * General Middleware
@@ -160,11 +91,11 @@ app.get("/health", (req, res) => {
  * API Routes
  */
 
-// Apply auth rate limiting to authentication routes
-app.use("/api/auth", authLimiter, authRoutes);
+// Authentication routes
+app.use("/api/auth", authRoutes);
 
-// Apply general rate limiting to notes routes
-app.use("/api/notes", limiter, noteRoutes);
+// Notes routes
+app.use("/api/notes", noteRoutes);
 
 // Root route
 app.get("/", (req, res) => {

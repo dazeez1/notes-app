@@ -1,62 +1,24 @@
 /**
- * Notes App - Frontend JavaScript
- * Handles authentication, notes management, and UI interactions
+ * Notes App Frontend - Complete API Testing Interface
+ * Tests all endpoints with proper validation and error handling
  */
 
-// ============================================================================
-// CONFIGURATION & CONSTANTS
-// ============================================================================
-
+// Configuration
 const CONFIG = {
   API_BASE: "http://localhost:3000/api",
   ALERT_TIMEOUT: 5000,
-  MAX_OTP_LENGTH: 6,
-  MIN_PASSWORD_LENGTH: 6,
 };
 
-// Check if we're running from file:// protocol and show warning
-if (window.location.protocol === "file:") {
-  console.warn(
-    "Running from file:// protocol. For full functionality, please serve the app from a web server."
-  );
-  // You could show a warning to the user here
-}
-
-// ============================================================================
-// GLOBAL STATE
-// ============================================================================
-
+// Global state
 const AppState = {
   authToken: localStorage.getItem("authToken"),
   currentUser: null,
   notes: [],
   pendingEmail: null,
-  isLoading: false,
-  editingNote: null,
 };
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Escape HTML to prevent XSS attacks
- * @param {string} text - Text to escape
- * @returns {string} Escaped HTML
- */
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-/**
- * Show alert message to user
- * @param {string} elementId - ID of alert container
- * @param {string} message - Message to display
- * @param {string} type - Alert type (success, error, info)
- */
-function showAlert(elementId, message, type) {
+// Utility functions
+function showAlert(elementId, message, type = "info") {
   const alertElement = document.getElementById(elementId);
   if (!alertElement) return;
 
@@ -66,110 +28,69 @@ function showAlert(elementId, message, type) {
   }, CONFIG.ALERT_TIMEOUT);
 }
 
-/**
- * Show form loading state
- * @param {string} formId - ID of form element
- * @param {boolean} isLoading - Whether to show loading state
- */
-function setFormLoading(formId, isLoading) {
-  const form = document.getElementById(formId);
-  if (!form) return;
+function showFieldError(fieldId, message) {
+  const errorElement = document.getElementById(fieldId);
+  if (errorElement) {
+    errorElement.textContent = message;
+  }
+}
 
-  const submitButton = form.querySelector('button[type="submit"]');
-  if (!submitButton) return;
+function clearFieldError(fieldId) {
+  const errorElement = document.getElementById(fieldId);
+  if (errorElement) {
+    errorElement.textContent = "";
+  }
+}
+
+function logResponse(method, url, response, error = null) {
+  const logElement = document.getElementById("responseLog");
+
+  // Check if log element exists before trying to append
+  if (!logElement) {
+    console.warn("Response log element not found. Cannot log response.");
+    return;
+  }
+
+  const timestamp = new Date().toLocaleTimeString();
+  const logEntry = document.createElement("div");
+  logEntry.className = `log-entry ${error ? "error" : "success"}`;
+
+  const logData = {
+    timestamp,
+    method,
+    url,
+    status: response?.status || "ERROR",
+    response: error ? error.message : response?.data || response,
+  };
+
+  logEntry.textContent = `${timestamp} [${method}] ${url} - ${
+    logData.status
+  }\n${JSON.stringify(logData.response, null, 2)}`;
+
+  try {
+    logElement.appendChild(logEntry);
+    logElement.scrollTop = logElement.scrollHeight;
+  } catch (appendError) {
+    console.error("Failed to append log entry:", appendError);
+  }
+}
+
+function setLoading(elementId, isLoading) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
 
   if (isLoading) {
-    submitButton.disabled = true;
-    submitButton.innerHTML = '<div class="spinner"></div> Loading...';
-    submitButton.classList.add("loading");
-  } else {
-    submitButton.disabled = false;
-    submitButton.innerHTML =
-      submitButton.getAttribute("data-original-text") || "Submit";
-    submitButton.classList.remove("loading");
+    element.innerHTML =
+      '<div class="loading"><div class="spinner"></div>Loading...</div>';
   }
 }
 
-/**
- * Validate email format
- * @param {string} email - Email to validate
- * @returns {boolean} - Whether email is valid
- */
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-/**
- * Validate password strength
- * @param {string} password - Password to validate
- * @returns {Object} - Validation result with isValid and message
- */
-function validatePassword(password) {
-  if (password.length < 8) {
-    return {
-      isValid: false,
-      message: "Password must be at least 8 characters long",
-    };
-  }
-  if (!/[A-Z]/.test(password)) {
-    return {
-      isValid: false,
-      message: "Password must contain at least one uppercase letter",
-    };
-  }
-  if (!/[a-z]/.test(password)) {
-    return {
-      isValid: false,
-      message: "Password must contain at least one lowercase letter",
-    };
-  }
-  if (!/\d/.test(password)) {
-    return {
-      isValid: false,
-      message: "Password must contain at least one number",
-    };
-  }
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-    return {
-      isValid: false,
-      message: "Password must contain at least one special character",
-    };
-  }
-  return { isValid: true, message: "Password is strong" };
-}
-
-/**
- * Show/hide loading spinner
- * @param {boolean} show - Whether to show loading
- */
-function showLoading(show) {
-  const loading = document.getElementById("notesLoading");
-  if (!loading) return;
-
-  if (show) {
-    loading.classList.remove("hidden");
-  } else {
-    loading.classList.add("hidden");
-  }
-}
-
-/**
- * Make API request with error handling
- * @param {string} url - API endpoint
- * @param {Object} options - Fetch options
- * @returns {Promise<Object>} Response data
- */
+// API request function with comprehensive error handling
 async function apiRequest(url, options = {}) {
-  try {
-    // Check if we're online
-    if (!navigator.onLine) {
-      throw new Error(
-        "You are currently offline. Please check your internet connection."
-      );
-    }
+  const fullUrl = url.startsWith("http") ? url : `${CONFIG.API_BASE}${url}`;
 
-    const response = await fetch(url, {
+  try {
+    const response = await fetch(fullUrl, {
       headers: {
         "Content-Type": "application/json",
         ...(AppState.authToken && {
@@ -182,125 +103,33 @@ async function apiRequest(url, options = {}) {
 
     const data = await response.json();
 
+    // Log the response
+    logResponse(options.method || "GET", fullUrl, {
+      status: response.status,
+      data,
+    });
+
     if (!response.ok) {
-      // Handle specific HTTP status codes
       if (response.status === 401) {
-        // Token expired or invalid, logout user
         logout();
         throw new Error("Session expired. Please login again.");
-      } else if (response.status === 403) {
-        throw new Error(
-          "Access denied. You don't have permission to perform this action."
-        );
-      } else if (response.status === 429) {
-        throw new Error(
-          "Too many requests. Please wait a moment and try again."
-        );
-      } else if (response.status >= 500) {
-        throw new Error("Server error. Please try again later.");
       }
       throw new Error(data.message || `HTTP ${response.status}`);
     }
 
     return data;
   } catch (error) {
-    console.error("API Request failed:", error);
-
-    // Handle network errors
-    if (error.name === "TypeError" && error.message.includes("fetch")) {
-      throw new Error("Network error. Please check your internet connection.");
-    }
-
+    logResponse(options.method || "GET", fullUrl, null, error);
     throw error;
   }
 }
 
-// ============================================================================
-// UI MANAGEMENT
-// ============================================================================
-
-/**
- * Show login section
- */
-function showLogin() {
-  hideAllSections();
-  document.getElementById("loginSection").classList.remove("hidden");
-}
-
-/**
- * Show signup section
- */
-function showSignup() {
-  hideAllSections();
-  document.getElementById("signupSection").classList.remove("hidden");
-}
-
-/**
- * Show OTP verification section
- * @param {string} email - Email to verify
- */
-function showOtpVerification(email) {
-  hideAllSections();
-  const otpSection = document.getElementById("otpSection");
-  otpSection.classList.remove("hidden");
-  document.getElementById("otpEmail").textContent = email;
-  document.getElementById("otpCode").value = "";
-}
-
-/**
- * Show main app section
- */
-function showApp() {
-  hideAllSections();
-  document.getElementById("appSection").classList.remove("hidden");
-}
-
-/**
- * Hide all sections
- */
-function hideAllSections() {
-  const sections = [
-    "loginSection",
-    "signupSection",
-    "otpSection",
-    "appSection",
-  ];
-  sections.forEach((id) => {
-    const element = document.getElementById(id);
-    if (element) element.classList.add("hidden");
-  });
-}
-
-// ============================================================================
-// AUTHENTICATION FUNCTIONS
-// ============================================================================
-
-/**
- * Login user with email and password
- * @param {string} email - User email
- * @param {string} password - User password
- */
+// Authentication functions
 async function login(email, password) {
-  // Validate inputs
-  if (!email || !password) {
-    showAlert("loginAlert", "Please fill in all fields.", "error");
-    return;
-  }
-
-  if (!isValidEmail(email)) {
-    showAlert("loginAlert", "Please enter a valid email address.", "error");
-    return;
-  }
-
-  setFormLoading("loginForm", true);
-
   try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/auth/login`, {
+    const data = await apiRequest("/auth/login", {
       method: "POST",
-      body: JSON.stringify({
-        emailAddress: email,
-        password: password,
-      }),
+      body: JSON.stringify({ emailAddress: email, password }),
     });
 
     if (data.success) {
@@ -308,60 +137,19 @@ async function login(email, password) {
       AppState.currentUser = data.data.user;
       localStorage.setItem("authToken", AppState.authToken);
 
-      showAlert("loginAlert", "Login successful!", "success");
-      showApp();
-      loadUserProfile();
+      showAlert("authAlert", "Login successful!", "success");
+      showUserInfo();
+      showNotesSection();
       loadNotes();
     }
   } catch (error) {
-    showAlert(
-      "loginAlert",
-      error.message || "Login failed. Please try again.",
-      "error"
-    );
-  } finally {
-    setFormLoading("loginForm", false);
+    showAlert("authAlert", error.message, "error");
   }
 }
 
-/**
- * Sign up new user
- * @param {string} fullName - User's full name
- * @param {string} email - User's email
- * @param {string} phone - User's phone number
- * @param {string} password - User's password
- */
 async function signup(fullName, email, phone, password) {
-  // Validate inputs
-  if (!fullName || !email || !phone || !password) {
-    showAlert("signupAlert", "Please fill in all fields.", "error");
-    return;
-  }
-
-  if (!isValidEmail(email)) {
-    showAlert("signupAlert", "Please enter a valid email address.", "error");
-    return;
-  }
-
-  const passwordValidation = validatePassword(password);
-  if (!passwordValidation.isValid) {
-    showAlert("signupAlert", passwordValidation.message, "error");
-    return;
-  }
-
-  if (fullName.trim().length < 2) {
-    showAlert(
-      "signupAlert",
-      "Full name must be at least 2 characters long.",
-      "error"
-    );
-    return;
-  }
-
-  setFormLoading("signupForm", true);
-
   try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/auth/signup`, {
+    const data = await apiRequest("/auth/signup", {
       method: "POST",
       body: JSON.stringify({
         fullName: fullName.trim(),
@@ -373,35 +161,24 @@ async function signup(fullName, email, phone, password) {
 
     if (data.success) {
       showAlert(
-        "signupAlert",
-        "Account created successfully! Please check your email for the verification code.",
+        "authAlert",
+        "Account created! Check your email for OTP.",
         "success"
       );
       AppState.pendingEmail = email.toLowerCase().trim();
-      showOtpVerification(email.toLowerCase().trim());
+      showOtpForm();
     }
   } catch (error) {
-    showAlert(
-      "signupAlert",
-      error.message || "Signup failed. Please try again.",
-      "error"
-    );
-  } finally {
-    setFormLoading("signupForm", false);
+    showAlert("authAlert", error.message, "error");
   }
 }
 
-/**
- * Verify OTP code for email verification
- * @param {string} email - User's email
- * @param {string} otpCode - OTP verification code
- */
-async function verifyOtp(email, otpCode) {
+async function verifyOtp(otpCode) {
   try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/auth/verify-otp`, {
+    const data = await apiRequest("/auth/verify-otp", {
       method: "POST",
       body: JSON.stringify({
-        emailAddress: email,
+        emailAddress: AppState.pendingEmail,
         otpCode: otpCode,
       }),
     });
@@ -411,39 +188,19 @@ async function verifyOtp(email, otpCode) {
       AppState.currentUser = data.data.user;
       localStorage.setItem("authToken", AppState.authToken);
 
-      showAlert(
-        "otpAlert",
-        "Email verified successfully! Welcome to Notes App!",
-        "success"
-      );
-      showApp();
-      loadUserProfile();
+      showAlert("authAlert", "Email verified! Welcome!", "success");
+      showUserInfo();
+      showNotesSection();
       loadNotes();
     }
   } catch (error) {
-    showAlert(
-      "otpAlert",
-      error.message || "Verification failed. Please try again.",
-      "error"
-    );
+    showAlert("authAlert", error.message, "error");
   }
 }
 
-/**
- * Resend OTP verification code
- */
 async function resendOtp() {
-  if (!AppState.pendingEmail) {
-    showAlert(
-      "otpAlert",
-      "No pending email found. Please sign up again.",
-      "error"
-    );
-    return;
-  }
-
   try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/auth/resend-otp`, {
+    const data = await apiRequest("/auth/resend-otp", {
       method: "POST",
       body: JSON.stringify({
         emailAddress: AppState.pendingEmail,
@@ -451,81 +208,49 @@ async function resendOtp() {
     });
 
     if (data.success) {
-      showAlert(
-        "otpAlert",
-        "Verification code resent successfully!",
-        "success"
-      );
+      showAlert("authAlert", "OTP resent! Check your email.", "success");
     }
   } catch (error) {
-    showAlert(
-      "otpAlert",
-      error.message || "Failed to resend code. Please try again.",
-      "error"
-    );
+    showAlert("authAlert", error.message, "error");
   }
 }
 
-/**
- * Load user profile information
- */
 async function loadUserProfile() {
   try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/auth/me`);
-
+    const data = await apiRequest("/auth/me");
     if (data.success) {
       AppState.currentUser = data.data.user;
-      document.getElementById("userName").textContent =
-        AppState.currentUser.fullName;
-      document.getElementById("userEmail").textContent =
-        AppState.currentUser.emailAddress;
+      showUserInfo();
     }
   } catch (error) {
     console.error("Failed to load user profile:", error);
   }
 }
 
-/**
- * Logout user and clear session
- */
 function logout() {
   AppState.authToken = null;
   AppState.currentUser = null;
   AppState.notes = [];
   AppState.pendingEmail = null;
   localStorage.removeItem("authToken");
-  showLogin();
+
+  // Hide user info and notes sections
+  document.getElementById("userInfo").style.display = "none";
+  document.getElementById("notesSection").style.display = "none";
+  document.getElementById("apiTestSection").style.display = "none";
+
+  // Restore authentication section title and show forms when user logs out
+  const authSectionTitle = document.getElementById("authSectionTitle");
+  if (authSectionTitle) {
+    authSectionTitle.textContent = "🔐 Authentication";
+  }
+  document.getElementById("loginForm").style.display = "block";
+  document.getElementById("signupForm").style.display = "block";
+  document.getElementById("otpForm").style.display = "none";
 }
 
-// ============================================================================
-// NOTES MANAGEMENT
-// ============================================================================
-
-/**
- * Create a new note
- * @param {string} title - Note title
- * @param {string} content - Note content
- * @param {string} tags - Comma-separated tags
- */
+// Notes functions
 async function createNote(title, content, tags) {
-  // Validate inputs
-  if (!title || !content) {
-    showAlert("noteAlert", "Please fill in both title and content.", "error");
-    return;
-  }
-
-  if (title.trim().length < 1) {
-    showAlert("noteAlert", "Note title cannot be empty.", "error");
-    return;
-  }
-
-  if (content.trim().length < 1) {
-    showAlert("noteAlert", "Note content cannot be empty.", "error");
-    return;
-  }
-
-  setFormLoading("noteForm", true);
-
   try {
     const noteTags = tags
       ? tags
@@ -534,7 +259,7 @@ async function createNote(title, content, tags) {
           .filter((tag) => tag)
       : [];
 
-    const data = await apiRequest(`${CONFIG.API_BASE}/notes`, {
+    const data = await apiRequest("/notes", {
       method: "POST",
       body: JSON.stringify({
         noteTitle: title.trim(),
@@ -544,229 +269,214 @@ async function createNote(title, content, tags) {
     });
 
     if (data.success) {
-      showAlert("noteAlert", "Note created successfully!", "success");
-      document.getElementById("noteForm").reset();
+      showAlert("notesAlert", "Note created successfully!", "success");
+      document.getElementById("createNoteForm").reset();
       loadNotes();
-      loadStats();
     }
   } catch (error) {
-    showAlert(
-      "noteAlert",
-      error.message || "Failed to create note. Please try again.",
-      "error"
-    );
-  } finally {
-    setFormLoading("noteForm", false);
+    showAlert("notesAlert", error.message, "error");
   }
 }
 
-/**
- * Load all notes for the current user
- */
 async function loadNotes() {
-  showLoading(true);
+  setLoading("notesList", true);
   try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/notes`);
-
+    const data = await apiRequest("/notes");
     if (data.success) {
       AppState.notes = data.data.notes;
       displayNotes(AppState.notes);
-      updateTagFilter(AppState.notes);
     }
   } catch (error) {
-    showAlert(
-      "noteAlert",
-      error.message || "Failed to load notes. Please try again.",
-      "error"
-    );
+    showAlert("notesAlert", error.message, "error");
   } finally {
-    showLoading(false);
+    setLoading("notesList", false);
   }
 }
 
-/**
- * Load note statistics
- */
-async function loadStats() {
-  try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/notes/stats`);
+async function searchNotes(query) {
+  if (!query.trim()) {
+    loadNotes();
+    return;
+  }
 
+  setLoading("notesList", true);
+  try {
+    const data = await apiRequest(
+      `/notes/search?q=${encodeURIComponent(query)}`
+    );
     if (data.success) {
-      const stats = data.data.statistics;
-      document.getElementById("totalNotes").textContent = stats.totalNotes || 0;
-      document.getElementById("pinnedNotes").textContent =
-        stats.pinnedNotes || 0;
+      AppState.notes = data.data.notes;
+      displayNotes(AppState.notes);
     }
   } catch (error) {
-    console.error("Failed to load stats:", error);
+    showAlert("notesAlert", error.message, "error");
+  } finally {
+    setLoading("notesList", false);
   }
 }
 
-/**
- * Update an existing note
- * @param {string} noteId - Note ID
- * @param {Object} updates - Updates to apply
- */
+async function filterNotesByTag(tag) {
+  if (!tag.trim()) {
+    loadNotes();
+    return;
+  }
+
+  setLoading("notesList", true);
+  try {
+    const data = await apiRequest(`/notes?tag=${encodeURIComponent(tag)}`);
+    if (data.success) {
+      AppState.notes = data.data.notes;
+      displayNotes(AppState.notes);
+    }
+  } catch (error) {
+    showAlert("notesAlert", error.message, "error");
+  } finally {
+    setLoading("notesList", false);
+  }
+}
+
+async function filterNotesByTags(tags) {
+  if (!tags.trim()) {
+    loadNotes();
+    return;
+  }
+
+  setLoading("notesList", true);
+  try {
+    const data = await apiRequest(`/notes?tags=${encodeURIComponent(tags)}`);
+    if (data.success) {
+      AppState.notes = data.data.notes;
+      displayNotes(AppState.notes);
+    }
+  } catch (error) {
+    showAlert("notesAlert", error.message, "error");
+  } finally {
+    setLoading("notesList", false);
+  }
+}
+
 async function updateNote(noteId, updates) {
   try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/notes/${noteId}`, {
+    const data = await apiRequest(`/notes/${noteId}`, {
       method: "PUT",
       body: JSON.stringify(updates),
     });
 
     if (data.success) {
-      showAlert("noteAlert", "Note updated successfully!", "success");
+      showAlert("notesAlert", "Note updated successfully!", "success");
       loadNotes();
-      loadStats();
     }
   } catch (error) {
-    showAlert(
-      "noteAlert",
-      error.message || "Failed to update note. Please try again.",
-      "error"
-    );
+    showAlert("notesAlert", error.message, "error");
   }
 }
 
-/**
- * Delete a note
- * @param {string} noteId - Note ID to delete
- */
 async function deleteNote(noteId) {
-  // Create a more user-friendly confirmation dialog
-  const note = AppState.notes.find((n) => n._id === noteId);
-  const noteTitle = note ? note.noteTitle : "this note";
-
-  const confirmed = confirm(
-    `Are you sure you want to delete "${noteTitle}"?\n\nThis action cannot be undone.`
-  );
-  if (!confirmed) return;
+  if (!confirm("Are you sure you want to delete this note?")) return;
 
   try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/notes/${noteId}`, {
+    const data = await apiRequest(`/notes/${noteId}`, {
       method: "DELETE",
     });
 
     if (data.success) {
-      showAlert("noteAlert", "Note deleted successfully!", "success");
+      showAlert("notesAlert", "Note deleted successfully!", "success");
       loadNotes();
-      loadStats();
     }
   } catch (error) {
-    showAlert(
-      "noteAlert",
-      error.message || "Failed to delete note. Please try again.",
-      "error"
-    );
+    showAlert("notesAlert", error.message, "error");
   }
 }
 
-/**
- * Toggle pin status of a note
- * @param {string} noteId - Note ID
- */
-async function togglePin(noteId) {
-  try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/notes/${noteId}/pin`, {
-      method: "PATCH",
-    });
-
-    if (data.success) {
-      loadNotes();
-      loadStats();
-    }
-  } catch (error) {
-    showAlert(
-      "noteAlert",
-      error.message || "Failed to toggle pin. Please try again.",
-      "error"
-    );
-  }
-}
-
-/**
- * Get a note by ID
- * @param {string} noteId - Note ID
- * @returns {Object|null} Note object or null if not found
- */
-async function getNoteById(noteId) {
-  try {
-    const data = await apiRequest(`${CONFIG.API_BASE}/notes/${noteId}`);
-
-    if (data.success) {
-      return data.data.note;
-    }
-    return null;
-  } catch (error) {
-    console.error("Failed to get note:", error);
-    return null;
-  }
-}
-
-/**
- * Open edit modal for a note
- * @param {string} noteId - Note ID to edit
- */
 async function editNote(noteId) {
-  try {
-    const note = await getNoteById(noteId);
-    if (!note) {
-      showAlert("noteAlert", "Note not found.", "error");
-      return;
+  const note = AppState.notes.find((n) => n._id === noteId);
+  if (!note) return;
+
+  // Create edit form
+  const editForm = `
+    <div class="edit-form">
+      <h4>Edit Note</h4>
+      <form id="editNoteForm">
+        <div class="form-group">
+          <label for="editNoteTitle">Title:</label>
+          <input type="text" id="editNoteTitle" value="${escapeHtml(
+            note.noteTitle
+          )}" required minlength="1" maxlength="100">
+          <div class="error-message" id="editNoteTitleError"></div>
+        </div>
+        <div class="form-group">
+          <label for="editNoteContent">Content:</label>
+          <textarea id="editNoteContent" required minlength="1" maxlength="10000">${escapeHtml(
+            note.noteContent
+          )}</textarea>
+          <div class="error-message" id="editNoteContentError"></div>
+        </div>
+        <div class="form-group">
+          <label for="editNoteTags">Tags (comma-separated):</label>
+          <input type="text" id="editNoteTags" value="${
+            note.noteTags ? note.noteTags.join(", ") : ""
+          }" placeholder="work, urgent, personal">
+          <div class="error-message" id="editNoteTagsError"></div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-success">Save Changes</button>
+          <button type="button" onclick="cancelEdit('${noteId}')" class="btn-secondary">Cancel</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  // Replace note card with edit form
+  const noteCard = document.getElementById(`note-${noteId}`);
+  if (noteCard) {
+    noteCard.innerHTML = editForm;
+
+    // Add event listener for edit form
+    const editFormElement = document.getElementById("editNoteForm");
+    if (editFormElement) {
+      editFormElement.addEventListener("submit", function (e) {
+        e.preventDefault();
+        saveNoteEdit(noteId);
+      });
     }
-
-    AppState.editingNote = note;
-
-    // Populate the edit form
-    document.getElementById("editTitle").value = note.noteTitle;
-    document.getElementById("editContent").value = note.noteContent;
-    document.getElementById("editTags").value = note.noteTags
-      ? note.noteTags.join(", ")
-      : "";
-
-    // Show the modal
-    document.getElementById("editModal").classList.remove("hidden");
-    document.getElementById("editTitle").focus();
-  } catch (error) {
-    showAlert("noteAlert", "Failed to load note for editing.", "error");
   }
 }
 
-/**
- * Close the edit modal
- */
-function closeEditModal() {
-  document.getElementById("editModal").classList.add("hidden");
-  AppState.editingNote = null;
-  document.getElementById("editForm").reset();
-  document.getElementById("editAlert").innerHTML = "";
-}
+async function saveNoteEdit(noteId) {
+  const titleElement = document.getElementById("editNoteTitle");
+  const contentElement = document.getElementById("editNoteContent");
+  const tagsElement = document.getElementById("editNoteTags");
 
-/**
- * Update a note via the edit modal
- * @param {string} noteId - Note ID
- * @param {string} title - Updated title
- * @param {string} content - Updated content
- * @param {string} tags - Updated tags (comma-separated)
- */
-async function updateNoteFromModal(noteId, title, content, tags) {
-  // Validate inputs
-  if (!title || !content) {
-    showAlert("editAlert", "Please fill in both title and content.", "error");
+  if (!titleElement || !contentElement || !tagsElement) {
+    showAlert("notesAlert", "Edit form elements not found", "error");
     return;
   }
 
-  if (title.trim().length < 1) {
-    showAlert("editAlert", "Note title cannot be empty.", "error");
+  const title = titleElement.value;
+  const content = contentElement.value;
+  const tags = tagsElement.value;
+
+  // Clear previous errors
+  clearFieldError("editNoteTitleError");
+  clearFieldError("editNoteContentError");
+  clearFieldError("editNoteTagsError");
+
+  const titleError = validateNoteTitle(title);
+  const contentError = validateNoteContent(content);
+  const tagsError = validateTags(tags);
+
+  if (titleError) {
+    showFieldError("editNoteTitleError", titleError);
     return;
   }
-
-  if (content.trim().length < 1) {
-    showAlert("editAlert", "Note content cannot be empty.", "error");
+  if (contentError) {
+    showFieldError("editNoteContentError", contentError);
     return;
   }
-
-  setFormLoading("editForm", true);
+  if (tagsError) {
+    showFieldError("editNoteTagsError", tagsError);
+    return;
+  }
 
   try {
     const noteTags = tags
@@ -776,7 +486,7 @@ async function updateNoteFromModal(noteId, title, content, tags) {
           .filter((tag) => tag)
       : [];
 
-    const data = await apiRequest(`${CONFIG.API_BASE}/notes/${noteId}`, {
+    const data = await apiRequest(`/notes/${noteId}`, {
       method: "PUT",
       body: JSON.stringify({
         noteTitle: title.trim(),
@@ -786,379 +496,501 @@ async function updateNoteFromModal(noteId, title, content, tags) {
     });
 
     if (data.success) {
-      showAlert("editAlert", "Note updated successfully!", "success");
-      closeEditModal();
+      showAlert("notesAlert", "Note updated successfully!", "success");
       loadNotes();
-      loadStats();
     }
   } catch (error) {
-    showAlert(
-      "editAlert",
-      error.message || "Failed to update note. Please try again.",
-      "error"
-    );
-  } finally {
-    setFormLoading("editForm", false);
+    showAlert("notesAlert", error.message, "error");
   }
 }
 
-/**
- * Search notes by query
- */
-async function searchNotes() {
-  const query = document.getElementById("searchInput").value.trim();
-  if (!query) {
-    loadNotes();
-    return;
-  }
+function cancelEdit(noteId) {
+  loadNotes();
+}
 
-  showLoading(true);
+async function loadStats() {
   try {
-    const data = await apiRequest(
-      `${CONFIG.API_BASE}/notes/search?q=${encodeURIComponent(query)}`
-    );
-
+    const data = await apiRequest("/notes/stats");
     if (data.success) {
-      AppState.notes = data.data.notes;
-      displayNotes(AppState.notes);
+      displayStats(data.data.statistics);
     }
   } catch (error) {
-    showAlert(
-      "noteAlert",
-      error.message || "Search failed. Please try again.",
-      "error"
-    );
-  } finally {
-    showLoading(false);
+    showAlert("notesAlert", error.message, "error");
   }
 }
 
-// ============================================================================
-// DISPLAY FUNCTIONS
-// ============================================================================
-
-/**
- * Display notes in the UI
- * @param {Array} notesToDisplay - Array of notes to display
- */
-function displayNotes(notesToDisplay) {
-  const container = document.getElementById("notesContainer");
+// Display functions
+function displayNotes(notes) {
+  const container = document.getElementById("notesList");
   if (!container) return;
 
-  if (notesToDisplay.length === 0) {
-    container.innerHTML =
-      '<p style="text-align: center; color: #666; grid-column: 1 / -1;">No notes found. Create your first note above!</p>';
+  if (notes.length === 0) {
+    container.innerHTML = '<p class="text-center">No notes found.</p>';
     return;
   }
 
-  container.innerHTML = notesToDisplay
-    .map((note) => createNoteCard(note))
+  container.innerHTML = notes
+    .map(
+      (note) => `
+        <div class="note-card" id="note-${note._id}">
+            <div class="note-title">${escapeHtml(note.noteTitle)}</div>
+            <div class="note-content">${escapeHtml(note.noteContent)}</div>
+            ${
+              note.noteTags && note.noteTags.length > 0
+                ? `
+                <div class="note-tags">
+                    ${note.noteTags
+                      .map(
+                        (tag) => `<span class="tag">${escapeHtml(tag)}</span>`
+                      )
+                      .join("")}
+                </div>
+            `
+                : ""
+            }
+            <div class="note-meta">
+                Created: ${new Date(note.noteCreatedAt).toLocaleDateString()}
+                ${
+                  note.noteUpdatedAt !== note.noteCreatedAt
+                    ? ` | Updated: ${new Date(
+                        note.noteUpdatedAt
+                      ).toLocaleDateString()}`
+                    : ""
+                }
+            </div>
+            <div class="note-actions">
+                <button onclick="editNote('${
+                  note._id
+                }')" class="btn-success">Edit</button>
+                <button onclick="deleteNote('${
+                  note._id
+                }')" class="btn-danger">Delete</button>
+            </div>
+        </div>
+    `
+    )
     .join("");
 }
 
-/**
- * Create HTML for a single note card
- * @param {Object} note - Note object
- * @returns {string} HTML string
- */
-function createNoteCard(note) {
-  const pinnedClass = note.isNotePinned ? "pinned" : "";
-  const pinIcon = note.isNotePinned ? "📌 " : "";
+function displayStats(stats) {
+  const container = document.getElementById("notesStats");
+  if (!container) return;
 
-  return `
-    <div class="note-card ${pinnedClass}">
-      <div class="note-title">${pinIcon}${escapeHtml(note.noteTitle)}</div>
-      <div class="note-content">${escapeHtml(note.noteContent)}</div>
-      ${createTagsHtml(note.noteTags)}
-      <div class="note-meta">
-        <span>Created: ${new Date(
-          note.noteCreatedAt
-        ).toLocaleDateString()}</span>
-        <span>Updated: ${new Date(
-          note.noteUpdatedAt
-        ).toLocaleDateString()}</span>
-      </div>
-      <div class="note-actions">
-        ${createActionButtons(note)}
-      </div>
-    </div>
-  `;
+  container.style.display = "block";
+  container.innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">${stats.totalNotes || 0}</div>
+                <div class="stat-label">Total Notes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${stats.pinnedNotes || 0}</div>
+                <div class="stat-label">Pinned Notes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${stats.archivedNotes || 0}</div>
+                <div class="stat-label">Archived Notes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${stats.totalTags || 0}</div>
+                <div class="stat-label">Total Tags</div>
+            </div>
+        </div>
+    `;
 }
 
-/**
- * Create HTML for note tags
- * @param {Array} tags - Array of tags
- * @returns {string} HTML string
- */
-function createTagsHtml(tags) {
-  if (!tags || tags.length === 0) return "";
+function showUserInfo() {
+  const userInfo = document.getElementById("userInfo");
+  const userDetails = document.getElementById("userDetails");
+  const authSectionTitle = document.getElementById("authSectionTitle");
 
-  return `
-    <div class="note-tags">
-      ${tags
-        .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
-        .join("")}
-    </div>
-  `;
+  if (AppState.currentUser) {
+    userDetails.innerHTML = `
+            <p><strong>Name:</strong> ${escapeHtml(
+              AppState.currentUser.fullName
+            )}</p>
+            <p><strong>Email:</strong> ${escapeHtml(
+              AppState.currentUser.emailAddress
+            )}</p>
+            <p><strong>Phone:</strong> ${escapeHtml(
+              AppState.currentUser.phoneNumber
+            )}</p>
+            <p><strong>Email Verified:</strong> ${
+              AppState.currentUser.isEmailVerified ? "✅" : "❌"
+            }</p>
+        `;
+    userInfo.style.display = "block";
+
+    // Change section title and hide authentication forms when user is logged in
+    if (authSectionTitle) {
+      authSectionTitle.textContent = "User Profile";
+    }
+    document.getElementById("loginForm").style.display = "none";
+    document.getElementById("signupForm").style.display = "none";
+    document.getElementById("otpForm").style.display = "none";
+  }
 }
 
-/**
- * Create action buttons for a note
- * @param {Object} note - Note object
- * @returns {string} HTML string
- */
-function createActionButtons(note) {
-  const editButton = createButton(
-    "✏️ Edit",
-    `editNote('${note._id}')`,
-    "btn-secondary"
-  );
-
-  const pinButton = createButton(
-    note.isNotePinned ? "📌 Unpin" : "📌 Pin",
-    `togglePin('${note._id}')`,
-    note.isNotePinned ? "btn-warning" : "btn-secondary"
-  );
-
-  const deleteButton = createButton(
-    "🗑️ Delete",
-    `deleteNote('${note._id}')`,
-    "btn-danger"
-  );
-
-  return editButton + pinButton + deleteButton;
+function showNotesSection() {
+  document.getElementById("notesSection").style.display = "block";
+  document.getElementById("apiTestSection").style.display = "block";
 }
 
-/**
- * Create a button HTML element
- * @param {string} text - Button text
- * @param {string} onclick - Onclick handler
- * @param {string} className - CSS class name
- * @returns {string} HTML string
- */
-function createButton(text, onclick, className) {
-  return `<button class="btn btn-small ${className}" onclick="${onclick}">${text}</button>`;
+function showOtpForm() {
+  document.getElementById("otpForm").style.display = "block";
+  document.getElementById("loginForm").style.display = "none";
+  document.getElementById("signupForm").style.display = "none";
 }
 
-/**
- * Update tag filter dropdown
- * @param {Array} notesToFilter - Array of notes to extract tags from
- */
-function updateTagFilter(notesToFilter) {
-  const tagFilter = document.getElementById("tagFilter");
-  if (!tagFilter) return;
-
-  const allTags = [...new Set(notesToFilter.flatMap((note) => note.noteTags))];
-
-  tagFilter.innerHTML =
-    '<option value="">All Tags</option>' +
-    allTags
-      .map(
-        (tag) =>
-          `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`
-      )
-      .join("");
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
 }
 
-/**
- * Filter notes by selected tag
- */
-function filterByTag() {
-  const selectedTag = document.getElementById("tagFilter").value;
-  if (!selectedTag) {
-    displayNotes(AppState.notes);
-    return;
+// API Testing function
+async function testEndpoint(method, endpoint) {
+  try {
+    const data = await apiRequest(endpoint, { method });
+    showAlert("apiTestResults", `${method} ${endpoint} - Success!`, "success");
+  } catch (error) {
+    showAlert(
+      "apiTestResults",
+      `${method} ${endpoint} - Error: ${error.message}`,
+      "error"
+    );
+  }
+}
+
+// Input validation functions
+function validateName(name) {
+  if (!name || name.trim().length < 2 || name.trim().length > 50) {
+    return "Name must be 2-50 characters long";
+  }
+  if (!/^[a-zA-Z\s\-']+$/.test(name)) {
+    return "Name can only contain letters, spaces, hyphens, and apostrophes";
+  }
+  return null;
+}
+
+function validateEmail(email) {
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return "Please enter a valid email address";
+  }
+  return null;
+}
+
+function validatePhone(phone) {
+  if (
+    !phone ||
+    !/^[\+]?[0-9][\d]{0,15}$/.test(phone.replace(/[\s\-\(\)]/g, ""))
+  ) {
+    return "Please enter a valid phone number";
+  }
+  return null;
+}
+
+function validatePassword(password) {
+  if (!password || password.length < 8) {
+    return "Password must be at least 8 characters long";
+  }
+  if (!/[A-Z]/.test(password)) {
+    return "Password must contain at least one uppercase letter";
+  }
+  if (!/[a-z]/.test(password)) {
+    return "Password must contain at least one lowercase letter";
+  }
+  if (!/[0-9]/.test(password)) {
+    return "Password must contain at least one number";
+  }
+  return null;
+}
+
+function validateNoteTitle(title) {
+  if (!title || title.trim().length < 1 || title.trim().length > 100) {
+    return "Note title must be 1-100 characters long";
+  }
+  if (!/^[a-zA-Z0-9\s\-_.,!?()]+$/.test(title)) {
+    return "Note title contains invalid characters";
+  }
+  return null;
+}
+
+function validateNoteContent(content) {
+  if (!content || content.trim().length < 1 || content.trim().length > 10000) {
+    return "Note content must be 1-10,000 characters long";
+  }
+  return null;
+}
+
+function validateTags(tags) {
+  if (!tags) return null;
+
+  const tagArray = tags
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag);
+
+  if (tagArray.length > 10) {
+    return "Maximum 10 tags allowed";
   }
 
-  const filteredNotes = AppState.notes.filter((note) =>
-    note.noteTags.includes(selectedTag)
-  );
-  displayNotes(filteredNotes);
+  for (const tag of tagArray) {
+    if (tag.length < 1 || tag.length > 20) {
+      return "Each tag must be 1-20 characters long";
+    }
+    if (!/^[a-zA-Z0-9\-]+$/.test(tag)) {
+      return "Tags can only contain letters, numbers, and hyphens";
+    }
+  }
+
+  return null;
 }
 
-// ============================================================================
-// EVENT LISTENERS
-// ============================================================================
-
-/**
- * Initialize event listeners
- */
-function initializeEventListeners() {
+// Event listeners
+document.addEventListener("DOMContentLoaded", function () {
   // Login form
-  const loginForm = document.getElementById("loginForm");
+  const loginForm = document.getElementById("loginFormElement");
   if (loginForm) {
     loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
+
+      const emailElement = document.getElementById("loginEmail");
+      const passwordElement = document.getElementById("loginPassword");
+
+      if (!emailElement || !passwordElement) {
+        showAlert("authAlert", "Login form elements not found", "error");
+        return;
+      }
+
+      const email = emailElement.value;
+      const password = passwordElement.value;
+
+      // Clear previous errors
+      clearFieldError("loginEmailError");
+      clearFieldError("loginPasswordError");
+
+      const emailError = validateEmail(email);
+      const passwordError = validatePassword(password);
+
+      if (emailError) {
+        showFieldError("loginEmailError", emailError);
+        return;
+      }
+      if (passwordError) {
+        showFieldError("loginPasswordError", passwordError);
+        return;
+      }
+
       login(email, password);
     });
   }
 
   // Signup form
-  const signupForm = document.getElementById("signupForm");
+  const signupForm = document.getElementById("signupFormElement");
   if (signupForm) {
     signupForm.addEventListener("submit", function (e) {
       e.preventDefault();
-      const fullName = document.getElementById("signupName").value;
-      const email = document.getElementById("signupEmail").value;
-      const phone = document.getElementById("signupPhone").value;
-      const password = document.getElementById("signupPassword").value;
-      signup(fullName, email, phone, password);
+
+      const nameElement = document.getElementById("signupName");
+      const emailElement = document.getElementById("signupEmail");
+      const phoneElement = document.getElementById("signupPhone");
+      const passwordElement = document.getElementById("signupPassword");
+
+      if (!nameElement || !emailElement || !phoneElement || !passwordElement) {
+        showAlert("authAlert", "Signup form elements not found", "error");
+        return;
+      }
+
+      const name = nameElement.value;
+      const email = emailElement.value;
+      const phone = phoneElement.value;
+      const password = passwordElement.value;
+
+      // Clear previous errors
+      clearFieldError("signupNameError");
+      clearFieldError("signupEmailError");
+      clearFieldError("signupPhoneError");
+      clearFieldError("signupPasswordError");
+
+      const nameError = validateName(name);
+      const emailError = validateEmail(email);
+      const phoneError = validatePhone(phone);
+      const passwordError = validatePassword(password);
+
+      if (nameError) {
+        showFieldError("signupNameError", nameError);
+        return;
+      }
+      if (emailError) {
+        showFieldError("signupEmailError", emailError);
+        return;
+      }
+      if (phoneError) {
+        showFieldError("signupPhoneError", phoneError);
+        return;
+      }
+      if (passwordError) {
+        showFieldError("signupPasswordError", passwordError);
+        return;
+      }
+
+      signup(name, email, phone, password);
     });
   }
 
   // OTP form
-  const otpForm = document.getElementById("otpForm");
+  const otpForm = document.getElementById("otpFormElement");
   if (otpForm) {
     otpForm.addEventListener("submit", function (e) {
       e.preventDefault();
-      const otpCode = document.getElementById("otpCode").value;
-      if (AppState.pendingEmail) {
-        verifyOtp(AppState.pendingEmail, otpCode);
-      } else {
-        showAlert(
-          "otpAlert",
-          "No pending email found. Please sign up again.",
-          "error"
-        );
+
+      const otpElement = document.getElementById("otpCode");
+      if (!otpElement) {
+        showAlert("authAlert", "OTP form element not found", "error");
+        return;
       }
+
+      const otpCode = otpElement.value;
+
+      // Clear previous errors
+      clearFieldError("otpCodeError");
+
+      if (!otpCode || !/^[0-9]{6}$/.test(otpCode)) {
+        showFieldError("otpCodeError", "Please enter a valid 6-digit OTP code");
+        return;
+      }
+
+      verifyOtp(otpCode);
     });
   }
 
-  // Note form
-  const noteForm = document.getElementById("noteForm");
-  if (noteForm) {
-    noteForm.addEventListener("submit", function (e) {
+  // Resend OTP
+  const resendOtpBtn = document.getElementById("resendOtp");
+  if (resendOtpBtn) {
+    resendOtpBtn.addEventListener("click", resendOtp);
+  }
+
+  // Logout
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", logout);
+  }
+
+  // Create note form
+  const createNoteForm = document.getElementById("createNoteForm");
+  if (createNoteForm) {
+    createNoteForm.addEventListener("submit", function (e) {
       e.preventDefault();
-      const title = document.getElementById("noteTitle").value;
-      const content = document.getElementById("noteContent").value;
-      const tags = document.getElementById("noteTags").value;
+
+      const titleElement = document.getElementById("noteTitle");
+      const contentElement = document.getElementById("noteContent");
+      const tagsElement = document.getElementById("noteTags");
+
+      if (!titleElement || !contentElement || !tagsElement) {
+        showAlert("notesAlert", "Note form elements not found", "error");
+        return;
+      }
+
+      const title = titleElement.value;
+      const content = contentElement.value;
+      const tags = tagsElement.value;
+
+      // Clear previous errors
+      clearFieldError("noteTitleError");
+      clearFieldError("noteContentError");
+      clearFieldError("noteTagsError");
+
+      const titleError = validateNoteTitle(title);
+      const contentError = validateNoteContent(content);
+      const tagsError = validateTags(tags);
+
+      if (titleError) {
+        showFieldError("noteTitleError", titleError);
+        return;
+      }
+      if (contentError) {
+        showFieldError("noteContentError", contentError);
+        return;
+      }
+      if (tagsError) {
+        showFieldError("noteTagsError", tagsError);
+        return;
+      }
+
       createNote(title, content, tags);
     });
   }
 
-  // Edit form
-  const editForm = document.getElementById("editForm");
-  if (editForm) {
-    editForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      if (AppState.editingNote) {
-        const title = document.getElementById("editTitle").value;
-        const content = document.getElementById("editContent").value;
-        const tags = document.getElementById("editTags").value;
-        updateNoteFromModal(AppState.editingNote._id, title, content, tags);
+  // Search button
+  const searchBtn = document.getElementById("searchBtn");
+  if (searchBtn) {
+    searchBtn.addEventListener("click", function () {
+      const queryElement = document.getElementById("searchQuery");
+      if (!queryElement) {
+        showAlert("notesAlert", "Search input not found", "error");
+        return;
+      }
+      const query = queryElement.value;
+      searchNotes(query);
+    });
+  }
+
+  // Filter by tag button
+  const filterBtn = document.getElementById("filterBtn");
+  if (filterBtn) {
+    filterBtn.addEventListener("click", function () {
+      const tagElement = document.getElementById("tagFilter");
+      if (!tagElement) {
+        showAlert("notesAlert", "Tag filter input not found", "error");
+        return;
+      }
+      const tag = tagElement.value;
+      filterNotesByTag(tag);
+    });
+  }
+
+  // Filter by multiple tags button
+  const tagsFilterBtn = document.getElementById("tagsFilterBtn");
+  if (tagsFilterBtn) {
+    tagsFilterBtn.addEventListener("click", function () {
+      const tagsElement = document.getElementById("tagsFilter");
+      if (!tagsElement) {
+        showAlert("notesAlert", "Tags filter input not found", "error");
+        return;
+      }
+      const tags = tagsElement.value;
+      filterNotesByTags(tags);
+    });
+  }
+
+  // Refresh button
+  const refreshBtn = document.getElementById("refreshBtn");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", loadNotes);
+  }
+
+  // Stats button
+  const statsBtn = document.getElementById("statsBtn");
+  if (statsBtn) {
+    statsBtn.addEventListener("click", loadStats);
+  }
+
+  // Clear log button
+  const clearLogBtn = document.getElementById("clearLogBtn");
+  if (clearLogBtn) {
+    clearLogBtn.addEventListener("click", function () {
+      const responseLog = document.getElementById("responseLog");
+      if (responseLog) {
+        responseLog.innerHTML = "";
       }
     });
   }
 
-  // Search input
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) {
-    searchInput.addEventListener("keypress", function (e) {
-      if (e.key === "Enter") {
-        searchNotes();
-      }
-    });
-  }
-
-  // Keyboard shortcuts
-  document.addEventListener("keydown", function (e) {
-    // Only handle shortcuts when not in input fields
-    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
-      return;
-    }
-
-    // Ctrl/Cmd + K for search
-    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-      e.preventDefault();
-      const searchInput = document.getElementById("searchInput");
-      if (searchInput) {
-        searchInput.focus();
-      }
-    }
-
-    // Ctrl/Cmd + N for new note
-    if ((e.ctrlKey || e.metaKey) && e.key === "n") {
-      e.preventDefault();
-      const noteTitle = document.getElementById("noteTitle");
-      if (noteTitle) {
-        noteTitle.focus();
-      }
-    }
-
-    // Escape to clear search or close modal
-    if (e.key === "Escape") {
-      const editModal = document.getElementById("editModal");
-      if (editModal && !editModal.classList.contains("hidden")) {
-        closeEditModal();
-      } else {
-        const searchInput = document.getElementById("searchInput");
-        if (searchInput && searchInput.value) {
-          searchInput.value = "";
-          loadNotes();
-        }
-      }
-    }
-  });
-
-  // Online/offline status
-  window.addEventListener("online", function () {
-    showAlert("noteAlert", "You are back online!", "success");
-  });
-
-  window.addEventListener("offline", function () {
-    showAlert(
-      "noteAlert",
-      "You are currently offline. Some features may not work.",
-      "error"
-    );
-  });
-
-  // Store original button text for loading states
-  const submitButtons = document.querySelectorAll('button[type="submit"]');
-  submitButtons.forEach((button) => {
-    button.setAttribute("data-original-text", button.textContent);
-  });
-}
-
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
-
-/**
- * Show keyboard shortcuts help
- */
-function showKeyboardShortcuts() {
-  const shortcuts = document.getElementById("keyboardShortcuts");
-  if (shortcuts) {
-    shortcuts.classList.add("show");
-    setTimeout(() => {
-      shortcuts.classList.remove("show");
-    }, 3000);
-  }
-}
-
-/**
- * Initialize the application
- */
-function initializeApp() {
-  initializeEventListeners();
-
-  // Show keyboard shortcuts hint on first load
-  setTimeout(() => {
-    showKeyboardShortcuts();
-  }, 2000);
-
+  // Initialize app
   if (AppState.authToken) {
-    showApp();
     loadUserProfile();
+    showNotesSection();
     loadNotes();
-    loadStats();
-  } else {
-    showLogin();
   }
-}
-
-// Initialize app when DOM is loaded
-document.addEventListener("DOMContentLoaded", initializeApp);
+});
